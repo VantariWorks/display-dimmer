@@ -21,8 +21,7 @@ display groups for larger multi-monitor setups.
   - `Ctrl + Alt + Page Down` for brightness down.
 - Added hotkey targeting for individual displays, All Displays, and linked
   display groups.
-- Added support for physical brightness keys on supported keyboards and
-  devices.
+- Added support for physical brightness keys on compatible keyboards and devices.
 - Added a redesigned, resizable Settings window with side navigation and
   remembered window size.
 - Added linked display groups for larger multi-monitor setups, with support in
