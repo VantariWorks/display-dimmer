@@ -53,7 +53,7 @@ No subscription.
 
 Display Dimmer is available from the Microsoft Store:
 
-[Download Display Dimmer](https://apps.microsoft.com/store/detail/9nbwhfcln6cm)
+[Download Display Dimmer](https://apps.microsoft.com/detail/9NBWHFCLN6CM?cid=github)
 
 [View release history](CHANGELOG.md)
 
