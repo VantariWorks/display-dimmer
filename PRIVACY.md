@@ -148,10 +148,11 @@ legal and operational requirements.
 Local Display Dimmer settings and diagnostics logs remain on your device until
 the app, Windows, or you remove them.
 
-## Contact
+## Support
 
 Questions about this privacy policy, or requests related to support messages or
 diagnostics reports, can be sent to:
 
 - Email: support@displaydimmer.com
-- Contact page: https://displaydimmer.com/contact
+- Support page: https://displaydimmer.com/support
+- Privacy policy: https://displaydimmer.com/privacy
