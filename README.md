@@ -61,8 +61,8 @@ Display Dimmer is available from the Microsoft Store:
 
 For help, bug reports, or compatibility issues:
 
-- Support page: https://displaydimmer.com/contact
-- Privacy policy: [PRIVACY.md](PRIVACY.md)
+- Support page: https://displaydimmer.com/support
+- Privacy policy: https://displaydimmer.com/privacy | [PRIVACY.md](PRIVACY.md)
 - Email: support@displaydimmer.com
 
 When reporting monitor-control issues, please include:
