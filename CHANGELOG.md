@@ -5,6 +5,15 @@ detailed than newer release notes, but are kept for historical context.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.2 (May 25, 2026)
+- Reduced misleading DDC/CI prompts for built-in displays or displays that do not detect DDC/CI.
+- Polished drag reordering for displays, schedules, hotkeys, and app rules.
+- Bug fixes and reliability improvements.
+
+## v2.2.1 (May 23, 2026)
+- Stability fixes for monitor reconnects, HDR/display changes, and DDC/CI fallback.
+- Clearer fallback behavior when DDC/CI is unavailable or a monitor is slow to respond.
+
 ## v2.2.0 (May 19, 2026)
 
 Display Dimmer 2.2 is a major hotkey and reliability update. It adds
