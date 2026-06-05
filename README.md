@@ -4,6 +4,8 @@ Display Dimmer is a Windows app for controlling external monitor brightness and 
 
 It can use DDC/CI when supported to adjust a monitor's hardware brightness directly. When hardware control is not available or does not behave reliably, Display Dimmer can fall back to software dimming so you can still control brightness from Windows.
 
+![Display Dimmer light theme UI](docs/images/light-theme-ui-image.png)
+
 [Learn more at displaydimmer.com](https://displaydimmer.com/)
 
 ## What It Does
