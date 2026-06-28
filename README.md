@@ -43,6 +43,12 @@ Global hotkeys can be used to adjust brightness and contrast without opening the
 
 Display Dimmer also supports physical brightness keys on supported keyboards and devices.
 
+## Local Automation
+
+Display Dimmer Pro can be controlled from PowerShell, AutoHotkey, Task Scheduler, Stream Deck, Arduino sensor projects, and other local tools.
+
+[View Local Automation documentation and examples](local-automation/README.md)
+
 ## Display Dimmer Pro
 
 Display Dimmer includes core brightness control, basic automation, and basic hotkey support for free.
