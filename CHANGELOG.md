@@ -5,6 +5,21 @@ detailed than newer release notes, but are kept for historical context.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.3 (June 29, 2026)
+This update focuses on local automation, Settings polish, and reliability improvements.
+
+### New
+- Local automation and command-line support for Display Dimmer Pro.
+- Control display brightness and contrast from scripts through the running Display Dimmer app.
+- Optional JSON output and state watching for PowerShell, AutoHotkey, Task Scheduler, Stream Deck, Arduino, and other local automation workflows.
+- More hotkey actions for display control.
+
+### Improved
+- Better handling for monitor reconnects, display changes, and DDC/CI fallback.
+- Improved Settings refresh behavior around display changes and DDC/CI state changes.
+- Added a hint when Windows or another app appears to reset screen brightness.
+- Reliability fixes for linked display groups, schedules, app rules, and hotkeys.
+
 ## v2.2.2 (May 25, 2026)
 - Reduced misleading DDC/CI prompts for built-in displays or displays that do not detect DDC/CI.
 - Polished drag reordering for displays, schedules, hotkeys, and app rules.
