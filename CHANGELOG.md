@@ -5,6 +5,17 @@ detailed than newer release notes, but are kept for historical context.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.5 (July 27, 2026)
+This is a focused efficiency and stability update.
+
+- Improved Gamma Guard monitoring efficiency while keeping protection responsive for schedules and app rules.
+
+## v2.2.4 (July 20, 2026)
+This update focuses on graphics compatibility and Settings reliability.
+
+- Improved compatibility and stability with a wider range of Windows graphics drivers.
+- Refined Settings window lifecycle handling.
+
 ## v2.2.3 (June 29, 2026)
 This update focuses on local automation, Settings polish, and reliability improvements.
 
