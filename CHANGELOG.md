@@ -1,7 +1,6 @@
 # Changelog
 
-This changelog covers notable Display Dimmer updates. Older entries are less
-detailed than newer release notes, but are kept for historical context.
+This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
