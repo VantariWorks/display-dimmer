@@ -56,7 +56,7 @@ DisplayDimmer.Cli.exe --watch --json
 | Watch state changes | `--watch --json` |
 | Force software/gamma brightness route | `--set-brightness <0-100> --brightness-mode gamma --target <target>` |
 | Force DDC/CI brightness route | `--set-brightness <0-100> --brightness-mode ddc --target <target>` |
-| Change saved DDC/CI preference only | `--set-ddc enabled/disabled --target <target>` |
+| Change saved DDC/CI preference only | `--set-ddc enabled\|disabled --target <target>` |
 | Raw monitor DDC/CI features | `--get-vcp` / `--set-vcp` |
 
 ## Display Targets
