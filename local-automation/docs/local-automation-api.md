@@ -69,7 +69,7 @@ DisplayDimmer.Cli.exe --set-brightness 70 --target dd_your_stable_id --json
 | Watch state changes | `--watch --json` | Streams JSON Lines until stopped. |
 | Force software/gamma brightness route | `--set-brightness <0-100> --brightness-mode gamma --target <target>` | Disables DDC/CI first for that display. |
 | Force DDC/CI brightness route | `--set-brightness <0-100> --brightness-mode ddc --target <target>` | Enables DDC/CI first for that display. |
-| Change saved DDC/CI preference only | `--set-ddc enabled|disabled --target <target>` | Does not set a new brightness value. |
+| Change saved DDC/CI preference only | `--set-ddc enabled\|disabled --target <target>` | Does not set a new brightness value. |
 | Use Display Dimmer contrast | `--set-contrast <0-100> --target <target>` | Uses Display Dimmer's software/gamma contrast path. |
 | Use raw monitor DDC/CI features | `--get-vcp` / `--set-vcp` | Advanced monitor-specific controls; high-impact writes require `--force`. |
 
