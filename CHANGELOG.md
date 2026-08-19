@@ -4,6 +4,16 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.6 (August 19, 2026)
+This update adds a requested tray behavior option and includes focused reliability and usability improvements. 
+
+### New
+- Added an option to automatically hide Display Dimmer to the system tray when you switch away from it.
+
+### Improved
+- Improved brightness restoration after an unexpected shutdown.
+- Improved Gamma Guard hint delivery and made disabled brightness controls easier to understand.
+
 ## v2.2.5 (July 27, 2026)
 This is a focused efficiency and stability update.
 
