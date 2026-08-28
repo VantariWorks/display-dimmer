@@ -4,6 +4,16 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.7 (August 28, 2026)
+This update improves gamma brightness, the Pro experience, and reliability when displays change.
+
+### Improved
+- Redesigned the Pro tab with a new overview for Pro users, including display brightness, automation status, and quick access to Pro features.
+- Improved gamma brightness so it can dim displays further while keeping colors as accurate as possible.
+- Added a brightness safety prompt with automatic revert when hardware and software dimming combine to make a display extremely dark.
+- Fixed gamma brightness getting stuck after waking from sleep when using duplicated displays.
+- Improved display identification and brightness recovery after reconnecting a monitor or TV.
+
 ## v2.2.6 (August 19, 2026)
 This update adds a requested tray behavior option and includes focused reliability and usability improvements. 
 
