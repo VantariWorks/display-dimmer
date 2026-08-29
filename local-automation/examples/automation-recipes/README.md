@@ -151,53 +151,130 @@ This is the safest pattern for light sensors and other background controllers th
 
 ## Extra-Dark Dimming
 
-Use this when normal `--set-brightness 0` is not dark enough for a hotkey, macro button, no-motion dimmer, idle script, or other local automation. The sequence lowers monitor hardware brightness first, then keeps Display Dimmer on software/gamma at the same low level.
+Use this when normal `--set-brightness 0` is not dark enough for a hotkey, macro button, no-motion dimmer, idle script, or other local automation. This is an advanced, explicit opt-in that combines low monitor hardware brightness with Display Dimmer software/gamma dimming.
+
+Normal `--set-ddc disabled` deliberately does not create this stack. When it changes the display from DDC enabled to disabled, it sets and saves gamma brightness at a neutral 100% so a user cannot accidentally place low gamma brightness over an already-dim monitor; repeating it while DDC/CI is already disabled is a no-op. The extra-dark sequence establishes that safe baseline first, writes raw monitor brightness explicitly, and only then applies gamma dimming.
 
 A few details matter:
 
-- This adds a hardware dimming layer only on displays where DDC/CI brightness is available. Displays without DDC/CI can still use normal software/gamma dimming, but there is no hardware layer to stack.
-- This recipe requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. If it is on, disabling DDC/CI can restore hardware brightness to 100 and prevent the deep-dim stack from working.
-- Capture `brightness` and `ddcEnabled` before dimming. The script temporarily changes DDC/CI state while it dims, then restores each display back to its original mode.
+- This works only on a physical display whose DDC/CI path supports hardware brightness VCP `0x10`. It is not a linked-group command.
+- VCP `0x10` uses the monitor's raw range, not a guaranteed percentage. Read `vcpMax`, calculate a cautious value, and start brighter than you think you need.
+- This recipe requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. Otherwise the asynchronous safety reset can restore hardware brightness to 100 after the script writes its low raw value.
+- Capture Display Dimmer brightness, DDC/CI mode, and raw hardware brightness before dimming. The DDC-off safety handoff can save a 100% baseline, so the restore uses `--save` to put the captured brightness back.
 - Use `--source cli` when extra-dark dimming should behave like a manual override. For no-motion dimming, this prevents schedules and app rules from immediately reasserting over an empty-room dim.
+- Test the sequence interactively on one display and keep the restore commands ready. Extremely low hardware and gamma values can make the screen difficult to recover.
 
-Deep dim one display:
+Capture state and choose cautious starting levels:
 
 ```powershell
+$cli = "DisplayDimmer.Cli.exe"
 $target = "dd_your_stable_id"
 
-DisplayDimmer.Cli.exe --set-brightness 0 --brightness-mode ddc --target $target --source cli --json | Out-Null
-DisplayDimmer.Cli.exe --set-ddc disabled --target $target --json | Out-Null
+function Invoke-DisplayDimmerJson {
+    param([string[]]$Arguments)
+
+    $response = & $cli @Arguments | ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0 -or $null -eq $response -or -not $response.success) {
+        $message = if ($null -ne $response) { $response.message } else { "No JSON response." }
+        throw "Display Dimmer command failed: $message"
+    }
+
+    return $response
+}
+
+$stateResponse = Invoke-DisplayDimmerJson -Arguments @(
+    "--get-state", "--target", $target, "--json"
+)
+$displayState = @($stateResponse.displays)[0]
+if ($null -eq $displayState) {
+    throw "The target did not return a physical display state."
+}
+
+$vcpResponse = Invoke-DisplayDimmerJson -Arguments @(
+    "--get-vcp", "0x10", "--target", $target, "--json"
+)
+$vcpState = @($vcpResponse.results)[0]
+if ($null -eq $vcpState -or $null -eq $vcpState.vcpValue -or $null -eq $vcpState.vcpMax) {
+    throw "The monitor did not return raw VCP 0x10 brightness and maximum values."
+}
+
+$previousBrightness = [int]$displayState.brightness
+$previousDdcEnabled = [bool]$displayState.ddcEnabled
+$previousHardwareBrightness = [uint32]$vcpState.vcpValue
+$hardwareMaximum = [uint32]$vcpState.vcpMax
+if ($hardwareMaximum -eq 0) {
+    throw "The monitor reported an unusable VCP 0x10 maximum."
+}
+
+# Start at 10% of the monitor-reported raw range and 20% gamma.
+# Tune one layer at a time only after confirming the restore works.
+$extraDarkHardware = [Math]::Max(1, [int][Math]::Round($hardwareMaximum * 0.10))
+$extraDarkGamma = 20
 ```
 
-Why this order: `--brightness-mode ddc` lowers the hardware layer while keeping Display Dimmer's brightness state in sync. `--set-ddc disabled` then carries that same low level into software/gamma. Do not use raw VCP `0x10` for this recipe; raw VCP bypasses Display Dimmer's brightness state and is harder to restore cleanly.
+Apply extra-dark dimming:
+
+```powershell
+# 1. Neutralize gamma and safely disable app-owned DDC brightness.
+Invoke-DisplayDimmerJson -Arguments @(
+    "--set-brightness", "100", "--brightness-mode", "gamma",
+    "--target", $target, "--source", "cli", "--json"
+) | Out-Null
+
+# 2. Lower the hardware layer explicitly and require matching readback.
+Invoke-DisplayDimmerJson -Arguments @(
+    "--set-vcp", "0x10", "$extraDarkHardware",
+    "--target", $target, "--verify", "--json"
+) | Out-Null
+
+# 3. Add the software/gamma layer deliberately.
+Invoke-DisplayDimmerJson -Arguments @(
+    "--set-brightness", "$extraDarkGamma", "--brightness-mode", "gamma",
+    "--target", $target, "--source", "cli", "--json"
+) | Out-Null
+```
+
+Why this order: the first command leaves gamma neutral and clears app-owned DDC brightness work. Raw VCP `0x10` then lowers only the monitor hardware layer and verifies the monitor's readback. The final command is the explicit opt-in to stack software/gamma dimming over that low hardware value.
 
 Restore depends on the display's original DDC/CI state.
 
-If DDC/CI was originally enabled, restore directly through the DDC/CI route:
+Always neutralize gamma first so the screen becomes easier to see before restoring hardware:
 
 ```powershell
-DisplayDimmer.Cli.exe --set-brightness $previousBrightness --brightness-mode ddc --target $target --source cli --json | Out-Null
+Invoke-DisplayDimmerJson -Arguments @(
+    "--set-brightness", "100", "--brightness-mode", "gamma",
+    "--target", $target, "--source", "cli", "--json"
+) | Out-Null
 ```
 
-If DDC/CI was originally disabled, briefly restore the hardware layer first, switch DDC/CI back off, then restore the previous software/gamma brightness. That keeps the display's original software/gamma preference while preventing the monitor's hardware brightness from staying at the dimmed level:
+If DDC/CI was originally enabled, restore the captured Display Dimmer brightness through its normal DDC-capable route. `--save` replaces the temporary 100% safety baseline:
 
 ```powershell
-DisplayDimmer.Cli.exe --set-brightness 100 --brightness-mode ddc --target $target --source cli --json | Out-Null
-DisplayDimmer.Cli.exe --set-ddc disabled --target $target --json | Out-Null
-DisplayDimmer.Cli.exe --set-brightness $previousBrightness --brightness-mode gamma --target $target --source cli --json | Out-Null
-```
-
-For multiple displays, read state first and save `brightness` plus `ddcEnabled` for each physical display. Then run the dim sequence per display instead of assuming every monitor started in the same DDC/CI mode:
-
-```powershell
-$state = DisplayDimmer.Cli.exe --get-state --target all --json | ConvertFrom-Json
-
-foreach ($display in $state.displays) {
-    $target = $display.targetId
-    DisplayDimmer.Cli.exe --set-brightness 0 --brightness-mode ddc --target $target --source cli --json | Out-Null
-    DisplayDimmer.Cli.exe --set-ddc disabled --target $target --json | Out-Null
+if ($previousDdcEnabled) {
+    Invoke-DisplayDimmerJson -Arguments @(
+        "--set-brightness", "$previousBrightness", "--brightness-mode", "ddc",
+        "--target", $target, "--source", "cli", "--save", "--json"
+    ) | Out-Null
 }
 ```
+
+If DDC/CI was originally disabled, restore the exact captured raw hardware value first, then restore and save the previous gamma brightness while keeping DDC disabled:
+
+```powershell
+if (-not $previousDdcEnabled) {
+    Invoke-DisplayDimmerJson -Arguments @(
+        "--set-vcp", "0x10", "$previousHardwareBrightness",
+        "--target", $target, "--verify", "--json"
+    ) | Out-Null
+
+    Invoke-DisplayDimmerJson -Arguments @(
+        "--set-brightness", "$previousBrightness", "--brightness-mode", "gamma",
+        "--target", $target, "--source", "cli", "--save", "--json"
+    ) | Out-Null
+}
+```
+
+For multiple displays, repeat the capture, dim, and restore logic independently for each physical display. Do not reuse one monitor's raw value or `vcpMax` for another monitor.
 
 ## Linked Display Group
 

@@ -100,7 +100,7 @@ For scripts, add JSON:
 | `--set-contrast <0-100>` | Set live Display Dimmer contrast through the normal software/gamma contrast path. |
 | `--adjust-contrast <-100..100>` | Adjust live Display Dimmer contrast through the normal software/gamma contrast path. |
 | `--update-external-brightness <0-100>` | Refresh a standing-by external brightness value without applying it, so automation can hand off cleanly later. |
-| `--set-ddc enabled\|disabled` | Change the saved DDC/CI preference for a display through Display Dimmer's normal DDC transition path. |
+| `--set-ddc enabled\|disabled` | Change the saved DDC/CI preference; disabling uses a safe neutral-gamma handoff. |
 | `--list-vcp` | List Display Dimmer's known VCP controls and any monitor-advertised values. |
 | `--get-vcp <code-or-name>` | Read an advanced DDC/CI VCP feature from a monitor. |
 | `--set-vcp <code-or-name> <value>` | Write an allowed advanced DDC/CI VCP feature. High-impact writes require `--force`. |
@@ -114,7 +114,7 @@ For scripts, add JSON:
 | `--json` | all commands that return structured data | Print compact JSON. |
 | `--pretty` | all commands that return structured data | Print indented JSON. Implies `--json`. |
 | `--save` | `--set-brightness`, `--adjust-brightness` | Save the brightness setting instead of live-only control. This is a settings write, not a cooperative sensor handoff. Not valid with contrast, VCP, DDC preference, or `--update-external-brightness` commands. |
-| `--brightness-mode gamma\|software\|ddc` | `--set-brightness` | Force the normal Display Dimmer brightness route for this command. `gamma` and `software` disable DDC first; `ddc` enables DDC first. This is not a raw VCP write. |
+| `--brightness-mode gamma\|software\|ddc` | `--set-brightness` | Force the normal Display Dimmer brightness route for this command. `gamma` and `software` safely disable DDC at neutral gamma before applying the requested value; `ddc` enables DDC first. This is not a raw VCP write. |
 | `--force` | `--set-vcp` | Allow a high-impact or raw VCP write after you have chosen a target that resolves to exactly one display. |
 | `--verify` / `--no-verify` | `--set-vcp` | Override VCP readback verification. Verification is skipped for commands that can change input or power state. |
 | `--source <name>` | `--set-brightness`, `--adjust-brightness`, `--update-external-brightness` | Controls automation handoff. Use `cli` or omit the option for manual override behavior. Use another name, such as `desk-light-sensor`, for cooperative external automation that stands down while schedules/app rules own the target. Use the same named source with `--update-external-brightness` while standing by. |
@@ -296,12 +296,12 @@ Quick rule: use normal brightness and contrast commands when you want Display Di
 | Goal | Use | What it changes |
 |---|---|---|
 | Normal Display Dimmer brightness | `--set-brightness <0-100>` | Updates Display Dimmer's tracked brightness and uses the app's normal DDC/CI-or-gamma brightness route. |
-| Force software/gamma brightness | `--set-brightness <0-100> --brightness-mode gamma` | Disables DDC/CI first, then updates Display Dimmer brightness through software/gamma. |
+| Force software/gamma brightness | `--set-brightness <0-100> --brightness-mode gamma` | Safely disables DDC/CI at neutral gamma, then applies the requested software/gamma brightness. |
 | Force DDC/CI brightness | `--set-brightness <0-100> --brightness-mode ddc` | Enables DDC/CI first, then updates Display Dimmer brightness through the normal DDC-capable path. |
 | Normal Display Dimmer contrast | `--set-contrast <0-100>` | Updates Display Dimmer's software/gamma contrast state. It does not change the monitor OSD contrast value. |
 | Raw monitor brightness VCP | `--set-vcp 0x10 <value>` | Writes monitor hardware brightness directly. The valid range is monitor-reported, often but not always 0-100. It does not update Display Dimmer brightness state or sliders. |
 | Raw monitor contrast VCP | `--set-vcp ddc-contrast <value>` | Writes monitor hardware contrast directly. The valid range is monitor-reported, often but not always 0-100. It does not update Display Dimmer contrast state or sliders. |
-| DDC/CI preference only | `--set-ddc enabled` / `--set-ddc disabled` | Changes Display Dimmer's saved DDC/CI preference without setting a new brightness value. |
+| DDC/CI preference | `--set-ddc enabled` / `--set-ddc disabled` | Changes the saved preference; an enabled-to-disabled transition also sets and saves gamma brightness at 100%. |
 
 Use normal Display Dimmer commands for app-owned brightness and contrast:
 
@@ -319,25 +319,26 @@ DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode gamma --target dd_yo
 DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode ddc --target dd_your_stable_id
 ```
 
-`--brightness-mode gamma` and `--brightness-mode software` disable DDC/CI first, transition the current level to software/gamma, then set the requested brightness. `--brightness-mode ddc` enables DDC/CI first, then sets the requested brightness through Display Dimmer's normal DDC-capable brightness path. These commands change the saved DDC/CI preference for that display.
+`--brightness-mode gamma` and `--brightness-mode software` disable DDC/CI first, move through a safe neutral 100% gamma handoff, then set the requested brightness. `--brightness-mode ddc` enables DDC/CI first, then sets the requested brightness through Display Dimmer's normal DDC-capable brightness path. These commands change the saved DDC/CI preference for that display.
 
-Use `--set-ddc` when a script only needs to change the saved DDC/CI preference:
+Use `--set-ddc` when a script needs to change the saved DDC/CI preference:
 
 ```powershell
 DisplayDimmer.Cli.exe --set-ddc disabled --target dd_your_stable_id
 DisplayDimmer.Cli.exe --set-ddc enabled --target dd_your_stable_id
 ```
 
-Disabling DDC/CI through `--set-ddc` uses the same safe DDC-off-to-gamma transition as Settings. Enabling DDC/CI queues a reassert of the current Display Dimmer level to hardware when display control is enabled. `--set-ddc` saves the preference automatically, without `--save`.
+When `--set-ddc` changes the saved preference from enabled to disabled, it uses the same safety handoff as Settings: Display Dimmer sets and saves gamma brightness at 100%, preserves gamma contrast, and cancels pending low DDC brightness so low hardware and gamma dimming are not stacked accidentally. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. If the General setting requests a DDC reset, monitor hardware brightness is restored separately. Enabling DDC/CI queues a reassert of the current Display Dimmer level to hardware when display control is enabled. `--set-ddc` saves the preference automatically, without `--save`.
 
 ### Extra-Dark Dimming
 
-Most scripts should use normal `--set-brightness`. Use this pattern when you intentionally want to dim lower than Display Dimmer's normal brightness range, such as a hotkey, macro button, no-motion dimmer, or other local automation:
+Most scripts should use normal `--set-brightness`. Disabling DDC/CI no longer transfers a low hardware brightness percentage into gamma. Extra-dark dimming therefore requires an explicit advanced opt-in:
 
-1. Set brightness through the DDC/CI route.
-2. Disable DDC/CI so Display Dimmer keeps the same low level through software/gamma.
+1. Establish neutral 100% gamma through `--brightness-mode gamma`, which also safely disables DDC/CI.
+2. Read raw VCP `0x10` and its monitor-reported maximum, then write a cautious low hardware value with verification.
+3. Apply the intended software/gamma brightness explicitly.
 
-This pattern requires Display Dimmer > Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. If that setting is on, disabling DDC/CI can restore monitor hardware brightness to 100 and prevent the DDC + gamma stack from working. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for the copy-paste commands, DDC/CI support notes, and restore behavior.
+This deliberately combines raw monitor hardware brightness with Display Dimmer gamma dimming. VCP `0x10` values are monitor-specific and are not necessarily percentages. The pattern requires Display Dimmer > Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off, and the script must capture enough state to restore both layers. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious copy-paste commands, validation, and restore behavior.
 
 Normal `--set-contrast` stays on Display Dimmer's software/gamma contrast path. It does not change the monitor's hardware OSD contrast setting.
 
@@ -349,7 +350,7 @@ DisplayDimmer.Cli.exe --set-vcp ddc-contrast 50 --target dd_your_stable_id
 
 `--set-vcp ddc-contrast` writes hardware VCP `0x12` directly. It does not update Display Dimmer's normal software/gamma contrast slider or saved contrast setting. Use `--set-contrast` when you want Display Dimmer's in-app contrast state to change.
 
-Use `--set-brightness` for normal brightness control. You can still send numeric raw VCP `0x10`, but treat it as a monitor diagnostic/escape hatch rather than a named brightness command. `--set-vcp 0x10` writes hardware brightness directly and does not update Display Dimmer's normal brightness slider or saved brightness setting.
+Use `--set-brightness` for normal brightness control. You can still send numeric raw VCP `0x10`, but treat it as an advanced explicit hardware-control escape hatch for diagnostics or the documented extra-dark recipe rather than a named brightness command. `--set-vcp 0x10` writes hardware brightness directly and does not update Display Dimmer's normal brightness slider or saved brightness setting.
 
 Raw DDC/CI VCP commands require the monitor's DDC/CI path to respond, but they do not require Display Dimmer's DDC brightness preference to be enabled. They do not switch the display into DDC brightness mode, do not use software/gamma fallback, and do not participate in automation handoff. `--force` does not override disconnected displays, unsupported monitor features, DDC/CI timeouts, or failed monitor reads/writes.
 
@@ -385,7 +386,7 @@ DisplayDimmer.Cli.exe --set-vcp volume 25 --target dd_your_stable_id --target dd
 DisplayDimmer.Cli.exe --set-vcp ddc-contrast 50 --target dd_your_stable_id
 ```
 
-Numeric VCP `0x10` remains available for advanced raw monitor brightness diagnostics:
+Numeric VCP `0x10` remains available for advanced explicit raw monitor brightness control and diagnostics:
 
 ```powershell
 DisplayDimmer.Cli.exe --set-vcp 0x10 70 --target dd_your_stable_id
@@ -1038,7 +1039,7 @@ High-impact VCP commands such as input switching, power mode, mute/screen blank,
 - `--watch` streams full state changes only in this build; per-target watch filtering is not implemented.
 - Brightness commands use Display Dimmer's normal brightness path: DDC/CI when enabled and healthy, software/gamma fallback when needed.
 - `--brightness-mode` can switch one `--set-brightness` command to software/gamma or DDC first; this changes the saved DDC/CI preference for that display.
-- `--set-ddc` changes the saved DDC/CI preference without applying a new brightness value.
+- `--set-ddc` changes the saved DDC/CI preference; an enabled-to-disabled transition also sets and saves gamma brightness at a neutral 100% safety baseline.
 - Contrast commands use Display Dimmer's normal software/gamma contrast path. They are live-only and do not support `--save`.
 - VCP commands are advanced DDC/CI commands. Support and values are monitor-specific. Multi-target `--set-vcp` is allowed only for numeric raw VCP `0x10`, raw DDC contrast, and monitor volume; high-impact writes stay single-display only.
 - Transitions/fades are not part of v1.

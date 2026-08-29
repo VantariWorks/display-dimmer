@@ -56,7 +56,7 @@ DisplayDimmer.Cli.exe --watch --json
 | Watch state changes | `--watch --json` |
 | Force software/gamma brightness route | `--set-brightness <0-100> --brightness-mode gamma --target <target>` |
 | Force DDC/CI brightness route | `--set-brightness <0-100> --brightness-mode ddc --target <target>` |
-| Change saved DDC/CI preference only | `--set-ddc enabled\|disabled --target <target>` |
+| Change saved DDC/CI preference | `--set-ddc enabled\|disabled --target <target>` |
 | Raw monitor DDC/CI features | `--get-vcp` / `--set-vcp` |
 
 ## Display Targets
@@ -150,18 +150,19 @@ DisplayDimmer.Cli.exe --set-brightness 40 --target primary --json --pretty
 
 ## DDC/CI, Gamma, And VCP
 
-Normal `--set-brightness` uses Display Dimmer's normal brightness path for each display: DDC/CI when enabled and healthy, or software/gamma when DDC/CI is disabled, unavailable, or unreliable. Use `--brightness-mode gamma` or `--brightness-mode software` when a script should disable DDC/CI first, transition the current level to software/gamma, and then set brightness. Use `--brightness-mode ddc` when a script should enable DDC/CI first, then set brightness through Display Dimmer's normal DDC-capable path.
+Normal `--set-brightness` uses Display Dimmer's normal brightness path for each display: DDC/CI when enabled and healthy, or software/gamma when DDC/CI is disabled, unavailable, or unreliable. Use `--brightness-mode gamma` or `--brightness-mode software` when a script should disable DDC/CI first, move through a safe neutral 100% gamma handoff, and then set the requested software/gamma brightness. Use `--brightness-mode ddc` when a script should enable DDC/CI first, then set brightness through Display Dimmer's normal DDC-capable path.
 
-Use `--set-ddc enabled` or `--set-ddc disabled` when a script only needs to change the saved DDC/CI preference. Disabling DDC/CI uses Display Dimmer's normal DDC-off-to-gamma transition. Enabling DDC/CI reasserts the current Display Dimmer level through the DDC-capable path when display control is enabled. `--set-ddc` saves the preference automatically, without `--save`.
+Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change the saved DDC/CI preference. When the preference changes from enabled to disabled, Display Dimmer sets and saves gamma brightness at a neutral 100% while preserving gamma contrast, preventing accidental double dimming over low monitor hardware brightness. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. Enabling DDC/CI reasserts the current Display Dimmer level through the DDC-capable path when display control is enabled. `--set-ddc` saves the preference automatically, without `--save`.
 
-For normal scripts, prefer one `--set-brightness` command. If you intentionally want to dim lower than Display Dimmer's normal brightness range, set the DDC brightness first, then switch DDC/CI off at the same low level:
+For normal scripts, prefer one `--set-brightness` command. Disabling DDC/CI no longer carries a low hardware brightness percentage into gamma. An extra-dark script must opt into both layers explicitly: establish neutral gamma, write raw monitor brightness after checking VCP `0x10`, and then request software/gamma dimming:
 
 ```powershell
-DisplayDimmer.Cli.exe --set-brightness 0 --brightness-mode ddc --target dd_your_display_id --source cli --json
-DisplayDimmer.Cli.exe --set-ddc disabled --target dd_your_display_id --json
+DisplayDimmer.Cli.exe --set-brightness 100 --brightness-mode gamma --target dd_your_display_id --source cli --json
+DisplayDimmer.Cli.exe --set-vcp 0x10 10 --target dd_your_display_id --verify --json
+DisplayDimmer.Cli.exe --set-brightness 20 --brightness-mode gamma --target dd_your_display_id --source cli --json
 ```
 
-This pattern requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. If that setting is on, disabling DDC/CI can restore monitor hardware brightness to 100 and prevent the DDC + gamma stack from working. For the full extra-dark recipe, including DDC/CI support and restore behavior, see [Automation Recipes](examples/automation-recipes/README.md#extra-dark-dimming).
+Raw VCP `0x10` values are monitor-specific and are not necessarily percentages; read the monitor's current value and `vcpMax` first. This pattern also requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. For the full extra-dark recipe, including cautious values, error checking, and exact restore behavior, see [Automation Recipes](examples/automation-recipes/README.md#extra-dark-dimming).
 
 Display Dimmer also includes advanced VCP commands for monitors that support DDC/CI features such as input source, volume, mute, raw monitor contrast, and selected color controls.
 

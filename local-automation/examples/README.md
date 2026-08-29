@@ -78,7 +78,7 @@ DisplayDimmer.Cli.exe --set-brightness 40 --target primary --json --pretty
 
 Use `--source cli` for scripts that should act like manual overrides and interrupt schedules/app rules. That is usually the right choice for buttons, hotkeys, task actions, and no-motion dimming.
 
-If a script, hotkey, macro, or sensor needs to dim lower than normal brightness `0`, use the [extra-dark dimming recipe](automation-recipes/README.md#extra-dark-dimming) instead of raw VCP commands.
+If a script, hotkey, macro, or sensor needs to dim lower than normal brightness `0`, use the [extra-dark dimming recipe](automation-recipes/README.md#extra-dark-dimming). It safely establishes neutral gamma before an explicit, verified raw VCP `0x10` hardware-brightness write and the final gamma dim.
 
 Use a named source for cooperative sensor bridges that should stand down while Display Dimmer automation owns the display:
 

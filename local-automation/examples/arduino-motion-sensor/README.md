@@ -203,7 +203,7 @@ By default, this example treats no-motion dimming as a presence override. That m
 
 If you want schedules and app rules to win instead, run the bridge with `-CooperateWithAutomation`.
 
-This sample uses normal Display Dimmer brightness. If you need a deeper dim that combines DDC/CI hardware brightness with software/gamma dimming, see [Extra-Dark Dimming](../automation-recipes/README.md#extra-dark-dimming).
+This sample uses normal Display Dimmer brightness. If you intentionally need a deeper dim that combines raw DDC/CI hardware brightness with software/gamma dimming, use the advanced [Extra-Dark Dimming](../automation-recipes/README.md#extra-dark-dimming) sequence and its restore steps.
 
 ## Fast Test
 
