@@ -5,19 +5,19 @@ This changelog covers notable Display Dimmer updates.
 Some maintenance and packaging-only releases are omitted.
 
 ## v2.2.9 (September 3, 2026)
-Display Dimmer 2.2.9 improves screen temperature compatibility and keeps display controls responsive on more Windows systems.
+Display Dimmer 2.2.9 improves compatibility for blue light filtering and color temperature controls, while keeping display adjustments responsive on more Windows systems.
 
 ### Improved
-- Improved support for strong warmth settings across more graphics drivers.
+- Improved compatibility for warmer screen colors and blue light filtering across more graphics drivers.
 - Improved brightness, contrast, and temperature slider responsiveness on systems with stricter software color controls.
-- Improved temperature behavior at low brightness and across the contrast range.
+- Improved color temperature behavior at low brightness and across the contrast range.
 
 ## v2.2.8 (September 2, 2026)
-Display Dimmer 2.2.8 adds Pro screen-temperature controls, with approximate Kelvin readouts and a neutral setting for each display.
+Display Dimmer 2.2.8 adds an adjustable blue light filter and per-display color temperature controls with Pro. Choose warmer colors to reduce blue light, with approximate Kelvin readouts and a neutral setting for each display.
 
 ### New
-- Schedules, app rules, and hotkeys can now adjust temperature as well as brightness.
-- Free users can try temperature control for 30 minutes before upgrading.
+- Schedules, app rules, and hotkeys can now adjust color temperature as well as brightness.
+- Free users can try the blue light filter and color temperature controls for 30 minutes before upgrading.
 - Contrast and temperature sliders can now be hidden from the main window.
 - Pro can now be purchased in your browser and restored with the license key from your receipt.
 
