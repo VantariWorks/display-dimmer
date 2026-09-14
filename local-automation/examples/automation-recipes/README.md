@@ -4,6 +4,8 @@ These recipes show common ways to control Display Dimmer from scripts and local 
 
 Use these examples when you want a practical command pattern, not a full sample project.
 
+The recipes below remain brightness-focused. For API 1.1 native/Kelvin color-temperature commands, see the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) and separate [temperature controller example](../temperature-controller/). Temperature has independent ownership; do not reuse brightness standby flags to decide temperature control.
+
 ## Requirements
 
 - Display Dimmer is running.

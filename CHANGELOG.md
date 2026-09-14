@@ -4,6 +4,16 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.10 (September 14, 2026)
+This update expands temperature automation, protects unsaved settings changes, and improves slider feedback and responsiveness.
+
+### New
+- Adjust screen temperature from scripts using the CLI and local API, including Kelvin input (Pro).
+- Get a prompt before closing Settings when exiting with unsaved changes. Choose Apply, Keep editing, or Discard.
+
+### Improved
+- Improved slider feedback and responsiveness, with more reliable click-and-drag behavior.
+
 ## v2.2.9 (September 3, 2026)
 Display Dimmer 2.2.9 improves compatibility for blue light filtering and color temperature controls, while keeping display adjustments responsive on more Windows systems.
 

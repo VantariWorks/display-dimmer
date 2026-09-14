@@ -2,6 +2,8 @@
 
 This example is the LCD version of the Arduino motion sensor bridge.
 
+This bridge and LCD status remain brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the separate [temperature controller example](../temperature-controller/) and its temperature-specific capability, standby, and release handling. The LCD bridge does not accept temperature options.
+
 It reads a digital motion sensor from an Arduino Uno, controls Display Dimmer from PowerShell, and sends status lines back to the Arduino so a Nokia 5110 / PCD8544 LCD can show bridge state and brightness.
 
 Use the plain [Arduino Motion Sensor Bridge](../arduino-motion-sensor/) for motion detection without an LCD.

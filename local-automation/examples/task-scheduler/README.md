@@ -4,6 +4,8 @@ This example creates a Windows Task Scheduler task that calls `DisplayDimmer.Cli
 
 It does not create a Display Dimmer schedule in the Display Dimmer UI. Windows owns the schedule. Display Dimmer only receives the CLI command when Windows runs the task.
 
+The supplied task-registration script remains brightness-only. You can configure a separate task manually using the [API 1.1 temperature commands](../../docs/cli-api-v1.md#temperature-control-api-11), or study the separate [temperature controller example](../temperature-controller/) for ongoing cooperative control. Do not pass temperature arguments to the brightness task-creation script.
+
 This is useful for automation outside Display Dimmer's built-in scheduler:
 
 - a login task

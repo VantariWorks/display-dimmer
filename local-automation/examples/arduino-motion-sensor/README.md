@@ -2,6 +2,8 @@
 
 This example reads a digital motion sensor from an Arduino Uno and controls Display Dimmer from PowerShell.
 
+This bridge remains brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the separate [temperature controller example](../temperature-controller/), which demonstrates capability detection and temperature-specific standby/release. The motion script does not accept temperature options.
+
 If no motion is detected for a configurable idle period, the bridge dims the selected display. When motion returns, it restores the brightness that was active before the bridge dimmed the display.
 
 Default behavior:

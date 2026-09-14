@@ -2,6 +2,8 @@
 
 This example uses AutoHotkey v2 to call `DisplayDimmer.Cli.exe` from keyboard shortcuts.
 
+The supplied hotkeys remain brightness/DDC-focused. For API 1.1 temperature commands you can bind separately, see the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11). The separate [temperature controller example](../temperature-controller/) demonstrates cooperative control; manual temperature hotkeys should use manual-source semantics instead.
+
 ## Requirements
 
 - Display Dimmer is running.

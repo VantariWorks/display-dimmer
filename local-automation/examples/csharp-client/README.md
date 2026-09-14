@@ -4,6 +4,8 @@ This sample is for developers building a local Display Dimmer integration. It is
 
 The sample shows how a C# app can call `DisplayDimmer.Cli.exe`, read JSON output, choose a display, send a brightness command, and then read state back.
 
+This C# sample remains brightness-only. For an API 1.1 temperature integration, use the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) and separate [temperature controller example](../temperature-controller/) for running-server capability detection, native/Kelvin values, and temperature-specific ownership/release.
+
 ## What It Does
 
 1. Runs `DisplayDimmer.Cli.exe --list-displays --json`.

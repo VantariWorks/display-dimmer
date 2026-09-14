@@ -8,7 +8,9 @@ It reads an analog light sensor from an Arduino Uno, converts the room-light rea
 
 For the command reference, see:
 
-[CLI/API v1 reference](../../docs/cli-api-v1.md)
+[CLI/API 1.1 reference (wire protocol 1)](../../docs/cli-api-v1.md)
+
+This Arduino bridge remains brightness-only. For independent color-temperature/blue-light-filter automation in API 1.1, see the separate [temperature controller example](../temperature-controller/); it includes capability detection and temperature-specific standby/release behavior.
 
 The bridge handles Display Dimmer schedules and app rules, so those automations do not immediately fight the sensor.
 

@@ -4,6 +4,8 @@ You can control Display Dimmer from local scripts and helper apps with the Displ
 
 Local automation is a Display Dimmer Pro feature.
 
+Display Dimmer 2.2.10 adds temperature and blue light filter control through API **1.1**. The compatible wire protocol stays at `apiVersion: 1`, and `--api-version` still prints `1`. Use the running app's JSON `apiRevision` and `capabilities` to detect temperature support; missing metadata from an older app is not support.
+
 This works well for:
 
 - PowerShell scripts
@@ -65,7 +67,12 @@ DisplayDimmer.Cli.exe --set-brightness 70 --target dd_your_stable_id --json
 | Override schedules/app rules | `--set-brightness <0-100> --target <target> --source cli` | Same behavior when `--source` is omitted. |
 | Cooperate with schedules/app rules | `--set-brightness <0-100> --target <target> --source <name>` | Applies only when Display Dimmer automation does not already own the target. |
 | Keep a sensor handoff value fresh | `--update-external-brightness <0-100> --target <target> --source <name>` | Does not move the display or interrupt automation. |
-| Read current state for a script | `--get-state --target <target> --json` | Includes brightness, contrast, control mode, and automation state. |
+| Set warmer screen colors | `--set-temperature 4000 --temperature-unit kelvin --target <target>` | Temporary by default; manual temperature-only control. |
+| Adjust warmth | `--adjust-temperature -200 --temperature-unit kelvin --target <target>` | Negative Kelvin deltas select warmer colors. |
+| Save manual temperature | `--set-temperature -50 --target <target> --save` | Queues persistence of the temperature baseline only. |
+| Release manual temperature | `--resume-temperature --target <target>` | Resumes temperature ownership without changing brightness interruption. |
+| Keep a temperature handoff fresh | `--update-external-temperature 4000 --temperature-unit kelvin --target <target> --source <name>` | Standby intent only; requires a named non-`cli` source. |
+| Read current state for a script | `--get-state --target <target> --json` | Includes brightness, contrast, temperature, control mode, and separate temperature ownership. |
 | Watch state changes | `--watch --json` | Streams JSON Lines until stopped. |
 | Force software/gamma brightness route | `--set-brightness <0-100> --brightness-mode gamma --target <target>` | Safely disables DDC/CI, then applies the requested gamma brightness. |
 | Force DDC/CI brightness route | `--set-brightness <0-100> --brightness-mode ddc --target <target>` | Enables DDC/CI first for that display. |
@@ -101,11 +108,58 @@ DisplayDimmer.Cli.exe --get-state --target all --pretty
 
 Brightness changes are live-only by default. Add `--save` only for scripts that should change saved Display Dimmer settings. `--save` is a settings write, not a cooperative sensor handoff.
 
+## Temperature And Blue Light Filtering
+
+Use the same Temperature control as the app from your scripts:
+
+```powershell
+DisplayDimmer.Cli.exe --set-temperature 4000 --temperature-unit kelvin --target primary --json
+DisplayDimmer.Cli.exe --adjust-temperature -200 --temperature-unit kelvin --target primary --json
+DisplayDimmer.Cli.exe --set-temperature 0 --target primary --json
+DisplayDimmer.Cli.exe --resume-temperature --target primary --json
+```
+
+Native temperature ranges from `-100` (warm) through `0` (neutral) to `100` (cool). These are not the UI slider's position values. Add `--temperature-unit kelvin` for integer input from `2500` to `8300` K; lower Kelvin values select warmer colors. Native relative deltas accept `-200..200`; Kelvin deltas accept `-5800..5800`. Absolute values outside the range fail, while relative results clamp to the endpoints.
+
+Kelvin is approximate, not a measured monitor calibration. The app selects the nearest available native tint and returns both the requested Kelvin target and resolved value. Repeated small Kelvin adjustments accumulate within the same intent even when one step does not change the rounded readout. Warm settings reduce blue relative to red; neutral and cool settings are not blue-light-reducing settings.
+
+### Manual Changes, Rules, And Saving
+
+With no source, or `--source cli`, a temperature command is manual control. It masks an active temperature rule without interrupting that rule's brightness. If no temperature owner is active, the temporary value becomes a session baseline beneath later rules, returning when they end. Unrelated settings saves do not persist that temporary value. Another manual/UI/hotkey change, resume, reset, or restart replaces or retires it.
+
+Use `--save` on manual set/adjust only when the new temperature should become the saved baseline:
+
+```powershell
+DisplayDimmer.Cli.exe --set-temperature 4000 --temperature-unit kelvin --target primary --save --json
+```
+
+`persistenceStatus: "queued"` means the baseline was accepted and saving scheduled, not that disk writing has finished. Temperature save does not save unrelated live brightness/contrast. Named cooperative temperature commands cannot use `--save`; contrast remains live-only and does not accept save or source.
+
+Use plain `--resume-temperature` to release manual temperature interruption and the temporary CLI session baseline. It does not resume brightness or retire a named controller's already-applied tint, even if that controller's standby intent has expired; use named resume to retire the controller. Setting `0` or `6500` K is neutral **control**, not release. The scoped **Resume automation** UI/hotkey action also releases manual temperature intervention.
+
+### Cooperative Temperature Controllers
+
+```powershell
+DisplayDimmer.Cli.exe --set-temperature 4000 --temperature-unit kelvin --target dd_your_stable_id --source desk-temperature --json
+DisplayDimmer.Cli.exe --update-external-temperature 4000 --temperature-unit kelvin --target dd_your_stable_id --source desk-temperature --json
+DisplayDimmer.Cli.exe --resume-temperature --target dd_your_stable_id --source desk-temperature --json
+```
+
+A named set/adjust source cooperates: it applies when temperature is unowned, or defers with fresh intent while a temperature rule/manual override controls the display. Per-app temperature outranks schedule temperature. A brightness-only rule does not block external temperature; a rule explicitly set to neutral temperature does.
+
+Refresh-only records standby intent without moving the display or taking visible control. It requires an explicit non-`cli` source name. Refresh within **five seconds** for a later rule release to hand off to the latest value. Expiry removes handoff eligibility, not an already-applied tint: that tint may stay while unowned, but a stale value cannot return after a rule or manual action replaces it.
+
+Named resume retires only that source's current temperature intent/applied value. It cannot clear a newer source or an unrelated manual override. Controllers should release in cleanup, but an abrupt process stop cannot guarantee cleanup runs. External state is cleared on detach/control loss, reset, Pro/temperature access loss, and Local automation shutdown.
+
+Use `temperatureOwner`, `temperatureAutomationInterrupted`, and `externalTemperatureActive` rather than brightness automation flags to decide temperature standby. Inspect `temperatureDisposition` and `effectiveTemperature` in results: success can mean deferred intent rather than a visible change. All targets, including linked groups, return per-physical-display results.
+
+See the [complete temperature contract](cli-api-v1.md#temperature-control-api-11) and [working cooperative controller](../examples/temperature-controller/) for feature detection, polling, and source-safe release.
+
 ## Advanced Monitor Commands
 
 Display Dimmer also exposes a small advanced DDC/CI VCP command surface for monitor-specific controls. These commands are useful for things like input switching, monitor volume, raw audio mute when supported by the monitor, raw hardware contrast, color presets, color gains, power mode, and display usage time.
 
-Quick rule: use normal brightness and contrast commands when you want Display Dimmer's sliders, saved state, schedules, app rules, and handoff behavior to stay in sync. Use VCP commands only when you intentionally want a raw monitor DDC/CI feature.
+Quick rule: use normal brightness, contrast, and temperature commands when you want Display Dimmer's sliders, state, rules, and handoff behavior to stay in sync. Temperature uses the app's gamma color pipeline without changing hardware brightness or DDC preference. It is not a monitor VCP color preset or RGB-gain write. Use VCP commands only when you intentionally want a raw monitor DDC/CI feature.
 
 | Goal | Use | What it changes |
 | --- | --- | --- |
@@ -162,6 +216,8 @@ VCP support and values are monitor-specific. Multi-target `--set-vcp` is allowed
 ## Targets
 
 Use the `targetId` value from `--list-displays`. When Display Dimmer has a strong stable identity for the display, `targetId` appears as a `dd_...` ID. That is the best value for scripts you plan to keep.
+
+For a uniquely identified physical display, Display Dimmer preserves its `dd_...` target ID across ordinary monitor power cycles and reconnects, including cases where Windows changes `DISPLAYn` or the volatile driver-instance part of the display path. If a reconnect match is ambiguous, Display Dimmer fails closed instead of guessing; rerun `--list-displays` to obtain the current target.
 
 Linked display groups also appear as `dd_...` target IDs when you list displays. Targeting a linked group expands the command to the group's currently connected member displays. Each member still returns its own success or error result.
 
@@ -229,7 +285,7 @@ DisplayDimmer.Cli.exe --watch --json | ForEach-Object {
 }
 ```
 
-For cooperative sensor-style integrations, stand by when a display has an uninterrupted app rule or schedule:
+For **brightness** cooperative sensor-style integrations, stand by when a display has an uninterrupted app rule or schedule:
 
 ```powershell
 $perAppOwns = $display.perAppActive -and -not $display.perAppInterrupted
@@ -238,7 +294,9 @@ $scheduleOwns = $display.scheduleActive -and -not $display.scheduleInterrupted
 
 Make that decision per display when controlling more than one monitor. If display 2 is owned by a fullscreen app rule or schedule, send `--update-external-brightness` for display 2 and continue using `--set-brightness ... --source <name>` for displays that are not owned by Display Dimmer automation. Use `--source cli` when the script is intentionally supposed to override Display Dimmer automation, such as a manual shortcut or no-motion dimmer.
 
-The stream is local-only and requires Display Dimmer to be running. It reports the state Display Dimmer is already tracking, not a fresh hardware readback from DDC/CI or gamma. Use `dd_...` target IDs when your script later sends brightness commands you plan to keep.
+For temperature, use `temperatureOwner` (`manual`, `perApp`, `schedule`, `external`, `session`, or `saved`) and `temperatureAvailable` independently. Temperature fields are nullable/absent on older apps. Watch reports meaningful value, owner, availability, and freshness changes, not controller heartbeat timestamps.
+
+The stream is local-only and requires Display Dimmer to be running. It reports the state Display Dimmer is already tracking, not a fresh hardware readback from DDC/CI or gamma. Use `dd_...` target IDs when your script later sends commands you plan to keep.
 
 ## Troubleshooting Quick Checks
 
@@ -279,6 +337,7 @@ For app privacy information, see [Display Dimmer privacy](https://displaydimmer.
 
 See:
 
+- [Cooperative temperature controller](../examples/temperature-controller)
 - [Automation recipes](../examples/automation-recipes)
 - [C# client](../examples/csharp-client)
 - [Task Scheduler](../examples/task-scheduler)
@@ -287,4 +346,4 @@ See:
 - [Arduino light sensor](../examples/arduino-light-sensor)
 - [Arduino motion sensor](../examples/arduino-motion-sensor)
 
-Full technical reference: [CLI/API v1 reference](cli-api-v1.md).
+Full technical reference: [CLI/API 1.1 reference (wire protocol 1)](cli-api-v1.md).
