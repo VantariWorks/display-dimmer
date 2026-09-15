@@ -9,7 +9,7 @@ This update expands temperature automation, protects unsaved settings changes, a
 
 ### New
 - Adjust screen temperature from scripts using the CLI and local API, including Kelvin input (Pro).
-- Get a prompt before closing Settings when exiting with unsaved changes. Choose Apply, Keep editing, or Discard.
+- Closing Settings with unsaved changes now prompts you to apply them, keep editing, or discard them.
 
 ### Improved
 - Improved slider feedback and responsiveness, with more reliable click-and-drag behavior.
@@ -27,28 +27,34 @@ Display Dimmer 2.2.8 adds an adjustable blue light filter and per-display color 
 
 ### New
 - Schedules, app rules, and hotkeys can now adjust color temperature as well as brightness.
-- Free users can try the blue light filter and color temperature controls for 30 minutes before upgrading.
+- Free users can try the blue light filter and color temperature controls for 30 minutes each day; Pro removes the daily limit.
 - Contrast and temperature sliders can now be hidden from the main window.
 - Pro can now be purchased in your browser and restored with the license key from your receipt.
 
 ### Improved
-- Fixed a software dimming issue that could cause brightness to jump on some displays.
 - Refined contrast, reduced unnecessary low-brightness warnings, improved tray opening, and polished Settings.
+
+### Fixed
+- Fixed a software dimming issue that could cause brightness to jump on some displays.
 
 Display Dimmer Pro remains a one-time purchase—no subscription required.
 
 ## v2.2.7 (August 28, 2026)
 This update improves gamma brightness, the Pro experience, and reliability when displays change.
 
+### New
+- Added a brightness safety prompt with automatic revert when hardware and software dimming combine to make a display extremely dark.
+
 ### Improved
 - Redesigned the Pro tab with a new overview for Pro users, including display brightness, automation status, and quick access to Pro features.
 - Improved gamma brightness so it can dim displays further while keeping colors as accurate as possible.
-- Added a brightness safety prompt with automatic revert when hardware and software dimming combine to make a display extremely dark.
-- Fixed gamma brightness getting stuck after waking from sleep when using duplicated displays.
 - Improved display identification and brightness recovery after reconnecting a monitor or TV.
 
+### Fixed
+- Fixed gamma brightness getting stuck after waking from sleep when using duplicated displays.
+
 ## v2.2.6 (August 19, 2026)
-This update adds a requested tray behavior option and includes focused reliability and usability improvements. 
+This update adds a requested tray behavior option and includes focused reliability and usability improvements.
 
 ### New
 - Added an option to automatically hide Display Dimmer to the system tray when you switch away from it.
@@ -60,11 +66,13 @@ This update adds a requested tray behavior option and includes focused reliabili
 ## v2.2.5 (July 27, 2026)
 This is a focused efficiency and stability update.
 
+### Improved
 - Improved Gamma Guard monitoring efficiency while keeping protection responsive for schedules and app rules.
 
 ## v2.2.4 (July 20, 2026)
 This update focuses on graphics compatibility and Settings reliability.
 
+### Improved
 - Improved compatibility and stability with a wider range of Windows graphics drivers.
 - Refined Settings window lifecycle handling.
 
@@ -76,21 +84,31 @@ This update focuses on local automation, Settings polish, and reliability improv
 - Control display brightness and contrast from scripts through the running Display Dimmer app.
 - Optional JSON output and state watching for PowerShell, AutoHotkey, Task Scheduler, Stream Deck, Arduino, and other local automation workflows.
 - More hotkey actions for display control.
+- Added a hint when Windows or another app appears to reset screen brightness.
 
 ### Improved
 - Better handling for monitor reconnects, display changes, and DDC/CI fallback.
 - Improved Settings refresh behavior around display changes and DDC/CI state changes.
-- Added a hint when Windows or another app appears to reset screen brightness.
+
+### Fixed
 - Reliability fixes for linked display groups, schedules, app rules, and hotkeys.
 
 ## v2.2.2 (May 25, 2026)
-- Reduced misleading DDC/CI prompts for built-in displays or displays that do not detect DDC/CI.
+
+### Improved
+- Refined Settings hints so they appear at more appropriate times.
 - Polished drag reordering for displays, schedules, hotkeys, and app rules.
+
+### Fixed
 - Bug fixes and reliability improvements.
 
 ## v2.2.1 (May 23, 2026)
-- Stability fixes for monitor reconnects, HDR/display changes, and DDC/CI fallback.
+
+### Improved
 - Clearer fallback behavior when DDC/CI is unavailable or a monitor is slow to respond.
+
+### Fixed
+- Stability fixes for monitor reconnects, HDR/display changes, and DDC/CI fallback.
 
 ## v2.2.0 (May 19, 2026)
 
