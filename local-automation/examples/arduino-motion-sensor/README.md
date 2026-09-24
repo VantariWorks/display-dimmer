@@ -2,15 +2,15 @@
 
 This example reads a digital motion sensor from an Arduino Uno and controls Display Dimmer from PowerShell.
 
-This bridge remains brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the separate [temperature controller example](../temperature-controller/), which demonstrates capability detection and temperature-specific standby/release. The motion script does not accept temperature options.
+This bridge remains brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the [temperature command reference](../../docs/cli-api-v1.md#temperature-control-api-11). The motion script does not accept temperature options.
 
-If no motion is detected for a configurable idle period, the bridge dims the selected display. When motion returns, it restores the brightness that was active before the bridge dimmed the display.
+If no motion is detected for a configurable idle period, the bridge dims the selected display. When motion returns, it restores the previous brightness or resumes a schedule/app rule that was active and unpaused before the dim.
 
 Default behavior:
 
 ```text
 No motion for 2 minutes -> set brightness to 20
-Motion returns          -> restore previous brightness
+Motion returns          -> restore previous brightness or resume prior rule
 ```
 
 This folder is the plain motion-sensor example. It does not drive an LCD or send status lines back to the Arduino. For the Nokia LCD version, use [Arduino Motion Sensor + Nokia LCD](../arduino-motion-sensor-lcd/).
@@ -199,9 +199,13 @@ If no motion is detected for 2 minutes, the bridge sends:
 DisplayDimmer.Cli.exe --set-brightness 20 --target dd_75dd7b504e36086f --source cli
 ```
 
-When motion returns, it restores the brightness value reported by `--get-state` immediately before dimming.
+When motion returns, it restores the brightness value reported by `--get-state` immediately before dimming if no rule owned the display. If an active, unpaused schedule or app rule owned one stable physical `dd_...` display before the idle dim, the bridge instead sends `--resume-automation --target <that-id> --expected-brightness 20`. The rule can then reassert its current level. If the rule ended while idle, the bridge restores the captured brightness only after confirming the display is still at the idle level.
 
-By default, this example treats no-motion dimming as a presence override. That means idle dim and motion restore commands behave like manual Display Dimmer commands and can interrupt schedules or app rules for the target display. This is usually the right behavior for a motion sensor because an empty room should be allowed to dim the display even if automation is active.
+By default, this example treats no-motion dimming as a presence override. The idle dim can temporarily interrupt an active schedule or app rule. With the default `-RestoreBrightness -1`, motion conditionally releases that interruption when the running app supports API 1.2 resume. A pre-existing interruption detected before dimming is not released. On older apps, or with `primary`, `all`, or a linked-group target whose physical identity cannot be verified as a single `dd_...` display, the bridge stands by instead of dimming an active rule it could not safely resume. Use a stable physical ID for this workflow.
+
+An explicit `-RestoreBrightness` of 0–100 is a fixed manual restore choice and does not resume the interrupted rule. If a rule is active before idle, this fixed mode dims and restores only one matching stable physical `dd_...` target; `primary`, `all`, and linked groups stand by. The fixed restore leaves that rule manually interrupted, as requested. The bridge leaves a newer manual level or a rule that took ownership unpaused during idle alone.
+
+The `--expected-brightness` guard detects a later change to a different percentage. A later user action at the same idle percentage cannot be distinguished without an ownership token; test that case before relying on unattended use.
 
 If you want schedules and app rules to win instead, run the bridge with `-CooperateWithAutomation`.
 
@@ -228,7 +232,7 @@ Use Windows Task Scheduler when you want the motion bridge to start every time y
 Before creating the task, make sure this manual command works:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
 ```
 
 Recommended Task Scheduler settings:
@@ -240,8 +244,8 @@ Recommended Task Scheduler settings:
 | Security option | Run only when user is logged on |
 | Delay task for | 30 seconds |
 | Program/script | `powershell.exe` |
-| Arguments | `-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id` |
-| Start in | `C:\Path\To\display-dimmer\local-automation` |
+| Arguments | `-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id` |
+| Start in | `C:\Path\To\display-dimmer-local-automation` |
 | If the task fails | restart every 1 minute, 3 times |
 | If task is already running | do not start a new instance |
 
@@ -250,13 +254,13 @@ Do not use "Run whether user is logged on or not" for display-control tasks. Dis
 After the task works, you can hide the PowerShell window by adding `-WindowStyle Hidden` before `-NoProfile`:
 
 ```text
--WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
+-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
 ```
 
 If `DisplayDimmer.Cli.exe` is not available through the Windows app execution alias, pass the exact CLI path with `-CliPath`:
 
 ```text
--NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id -CliPath "C:\Path\To\DisplayDimmer.Cli.exe"
+-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-motion-sensor\Start-ArduinoMotionSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id -CliPath "C:\Path\To\DisplayDimmer.Cli.exe"
 ```
 
 For startup reliability:
@@ -277,7 +281,7 @@ For startup reliability:
 | `IdleMinutes` | `2` | minutes without motion before dimming |
 | `IdleSeconds` | `0` | optional seconds override for quick tests |
 | `DimBrightness` | `20` | brightness to apply after idle |
-| `RestoreBrightness` | `-1` | optional fixed restore brightness; `-1` means restore captured brightness |
+| `RestoreBrightness` | `-1` | optional fixed manual restore brightness; `-1` restores captured brightness or resumes a rule that the bridge temporarily interrupted |
 | `AutomationPollIntervalMs` | `1000` | how often the bridge refreshes Display Dimmer state |
 | `DryRun` | `false` | print behavior without calling Display Dimmer |
 | `CooperateWithAutomation` | `false` | stand by while schedules or app rules own the target |
@@ -289,9 +293,10 @@ For startup reliability:
 
 By default, the bridge uses motion as a presence override:
 
-- idle dim and motion restore use Display Dimmer's normal manual command source
-- active schedules or app rules can be interrupted for the target display
-- the bridge restores the captured brightness when motion returns
+- idle dim uses Display Dimmer's normal manual command source
+- with the default `-RestoreBrightness -1`, a previously active, unpaused schedule or app rule can be temporarily interrupted only when a stable physical target and the `resume-automation` capability are available
+- motion conditionally resumes that rule with the idle level as a compare-and-set guard; otherwise it restores the captured brightness if the bridge still owns that level
+- an explicit `-RestoreBrightness` of 0–100 requests that fixed manual level instead of automatic rule resume
 
 This is the recommended behavior for most motion-sensor setups.
 

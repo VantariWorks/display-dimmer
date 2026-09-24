@@ -4,7 +4,9 @@ These examples show how to run `DisplayDimmer.Cli.exe` from Stream Deck or anoth
 
 Stream Deck buttons are user-triggered actions, so the examples use manual override behavior. That means they can interrupt active Display Dimmer schedules or app rules for the targeted displays.
 
-The recipes below remain brightness/DDC-focused. To create separate warmer-color buttons, use the [API 1.1 temperature commands](../../docs/cli-api-v1.md#temperature-control-api-11); a manual temperature command interrupts temperature only, not rule-driven brightness. For background cooperative control rather than a button, see the [temperature controller example](../temperature-controller/).
+The one-way buttons intentionally leave manual control in place. For a two-press temporary dim, the linked toggle recipe records whether a rule was active before dimming and uses API 1.2 guarded `--resume-automation` on the second press when appropriate.
+
+The recipes below remain brightness/DDC-focused. To create separate warmer-color buttons, use the [API 1.1 temperature commands](../../docs/cli-api-v1.md#temperature-control-api-11); a manual temperature command interrupts temperature only, not rule-driven brightness.
 
 ## Requirements
 

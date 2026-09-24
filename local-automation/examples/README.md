@@ -44,8 +44,8 @@ If a display only has a `display_N` target, rerun `--list-displays` after dockin
 
 ## Available Examples
 
-- [Cooperative temperature controller](temperature-controller/)
-  Shows API 1.1 capability detection, per-display temperature ownership, Kelvin commands, standby refresh, and source-safe release. Requires a temperature-capable running app.
+- [Windows inactivity dimmer](windows-inactivity-dimmer/)
+  Dims all eligible displays after five minutes without keyboard or mouse input and resumes previously active automation or restores unchanged displays when input returns. Includes a dry run and a Task Scheduler logon helper.
 
 - [Automation recipes](automation-recipes/)
   Shows practical command patterns for manual overrides, cooperative sensors, handoff updates, linked groups, and scheduled scripts.
@@ -81,7 +81,9 @@ DisplayDimmer.Cli.exe --set-brightness 40 --target primary --json --pretty
 
 Use `--source cli` for scripts that should act like manual overrides and interrupt schedules/app rules. That is usually the right choice for buttons, hotkeys, task actions, and no-motion dimming.
 
-Temperature manual control interrupts temperature only, leaving automated brightness running. Use native signed values or `--temperature-unit kelvin`; Kelvin is approximate. Ordinary temperature changes are session-only; manual `--save` queues temperature persistence without promoting unrelated live brightness/contrast. Named cooperative temperature sources cannot save. See the temperature example before reusing brightness standby logic: brightness-only rules do not own temperature.
+API 1.2 `--resume-automation` is for a temporary brightness override whose script recorded an active, unpaused rule before dimming and can verify the same physical display still has its own dim level. The inactivity watcher, motion bridges, and toggle recipe use it. One-way buttons and scheduled actions deliberately remain manual; named-source sensor handoff already works without it. The running app must advertise `resume-automation` in `--get-state` capabilities. Its expected-level check cannot distinguish a newer user action that chose the same percentage.
+
+Temperature manual control interrupts temperature only, leaving automated brightness running. Use native signed values or `--temperature-unit kelvin`; Kelvin is approximate. Ordinary temperature changes are session-only; manual `--save` queues temperature persistence without promoting unrelated live brightness/contrast. Named cooperative temperature sources cannot save. Do not reuse brightness standby flags for temperature: brightness-only rules do not own temperature.
 
 If a script, hotkey, macro, or sensor needs to dim lower than normal brightness `0`, use the [extra-dark dimming recipe](automation-recipes/README.md#extra-dark-dimming). It safely establishes neutral gamma before an explicit, verified raw VCP `0x10` hardware-brightness write and the final gamma dim.
 

@@ -4,6 +4,17 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.11 (September 24, 2026)
+This update gives you clearer automation control and more accurate multi-monitor feedback.
+
+### New
+- See when a manual adjustment has paused a schedule or app rule, resume it from the main window, and let the next automation session take over normally.
+
+### Improved
+- All displays and linked groups now show 'Mixed' when brightness or contrast differs, with sliders positioned near the average.
+- Local automation can now resume an interrupted schedule or app rule after a temporary brightness change (Pro, API 1.2).
+- Improved main-window placement around top and side taskbars, with refreshed Settings themes and hotkey reliability.
+
 ## v2.2.10 (September 14, 2026)
 This update expands temperature automation, protects unsaved settings changes, and improves slider feedback and responsiveness.
 

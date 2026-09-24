@@ -2,9 +2,11 @@
 
 This example creates a Windows Task Scheduler task that calls `DisplayDimmer.Cli.exe`.
 
+For a long-running watcher that dims after Windows user inactivity and starts at sign-in, use the separate [Windows inactivity dimmer](../windows-inactivity-dimmer/) example and its logon-task helper.
+
 It does not create a Display Dimmer schedule in the Display Dimmer UI. Windows owns the schedule. Display Dimmer only receives the CLI command when Windows runs the task.
 
-The supplied task-registration script remains brightness-only. You can configure a separate task manually using the [API 1.1 temperature commands](../../docs/cli-api-v1.md#temperature-control-api-11), or study the separate [temperature controller example](../temperature-controller/) for ongoing cooperative control. Do not pass temperature arguments to the brightness task-creation script.
+The supplied task-registration script remains brightness-only. You can configure a separate task manually using the [API 1.1 temperature commands](../../docs/cli-api-v1.md#temperature-control-api-11). Do not pass temperature arguments to the brightness task-creation script.
 
 This is useful for automation outside Display Dimmer's built-in scheduler:
 
@@ -109,6 +111,8 @@ The registered task runs `DisplayDimmer.Cli.exe` with arguments like:
 ```
 
 The CLI sends the command to the running Display Dimmer app, then exits. The example uses `--source cli` so the task behaves like a manual override if a schedule or app rule is active.
+
+This is a one-way scheduled action, so it does not immediately call `--resume-automation`; doing so could undo the task's intended brightness. For a temporary idle dim followed by conditional rule resume, use the [Windows inactivity watcher](../windows-inactivity-dimmer/).
 
 ## Check Whether It Ran
 

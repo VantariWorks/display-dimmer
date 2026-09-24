@@ -1,8 +1,8 @@
-# Display Dimmer Command-Line/API 1.1 Reference
+# Display Dimmer Command-Line/API 1.2 Reference
 
 This document describes Display Dimmer's local command-line automation API.
 
-API **1.1**, introduced in Display Dimmer 2.2.10, adds temperature control. The wire protocol, pipe name, and integer `apiVersion` remain version **1**. `--api-version` still prints `1`; it is not a feature-capability check. The running app advertises `apiRevision: "1.1"` and `capabilities: ["temperature", "temperature-kelvin", "external-temperature"]` in response and watch envelopes. Older apps can omit this metadata; missing fields must not be interpreted as support. This reference keeps its existing `cli-api-v1.md` URL for compatibility.
+API **1.2** adds conditional brightness automation resume to the temperature features introduced in API 1.1. Cooperative named-source brightness handoff to schedules and app rules was already available in 2.2.10; it is a separate, pre-existing contract. The wire protocol, pipe name, and integer `apiVersion` remain version **1**. `--api-version` still prints `1`; it is not a feature-capability check. The running app advertises `apiRevision: "1.2"` and a `resume-automation` capability in response and watch envelopes. Older apps can omit this metadata; missing capabilities must not be interpreted as support. This reference keeps its existing `cli-api-v1.md` URL for compatibility.
 
 The user-facing executable is the Display Dimmer command-line tool (`DisplayDimmer.Cli.exe`).
 
@@ -99,6 +99,7 @@ For scripts, add JSON:
 | `--api-version` | Print the CLI/API protocol version. |
 | `--list-displays` | List connected displays and copy-paste target IDs. |
 | `--get-state` | Return display state and automation state. |
+| `--resume-automation` | Release brightness schedule/app-rule interruption when the tracked brightness still matches `--expected-brightness`. |
 | `--set-brightness <0-100>` | Set absolute live Display Dimmer brightness through the normal app-owned brightness path. |
 | `--adjust-brightness <-100..100>` | Adjust Display Dimmer brightness relative to current value through the normal app-owned brightness path. |
 | `--set-contrast <0-100>` | Set live Display Dimmer contrast through the normal software/gamma contrast path. |
@@ -118,13 +119,14 @@ For scripts, add JSON:
 
 | Option | Applies to | Purpose |
 |---|---|---|
-| `--target <target>` | `--get-state`, brightness commands, contrast commands, temperature commands, DDC preference commands, VCP commands, `--update-external-brightness` | Select one display. Required for every temperature command, including resume. Repeat `--target` to select more than one display. |
+| `--target <target>` | `--get-state`, brightness commands, `--resume-automation`, contrast commands, temperature commands, DDC preference commands, VCP commands, `--update-external-brightness` | Select a display, linked group, or `all`. Required for resume commands and every temperature command. Repeat `--target` only for commands that allow multiple targets. |
+| `--expected-brightness <0-100>` | `--resume-automation` | Release brightness interruption only if the display still has this tracked level. |
 | `--json` | all commands that return structured data | Print compact JSON. |
 | `--pretty` | all commands that return structured data | Print indented JSON. Implies `--json`. |
 | `--save` | brightness set/adjust; manual temperature set/adjust | Change the saved baseline. Temperature rejects a named cooperative source together with `--save`; omit source or use `cli`. Not valid with contrast, VCP, DDC preference, external-intent refresh, or resume commands. |
 | `--temperature-unit native\|kelvin` | temperature set/adjust and `--update-external-temperature` | Select signed native units (default) or approximate Kelvin input. Not valid with resume or unrelated commands. |
 | `--brightness-mode gamma\|software\|ddc` | `--set-brightness` | Force the normal Display Dimmer brightness route for this command. `gamma` and `software` safely disable DDC at neutral gamma before applying the requested value; `ddc` enables DDC first. This is not a raw VCP write. |
-| `--force` | `--set-vcp` | Allow a high-impact or raw VCP write after you have chosen a target that resolves to exactly one display. |
+| `--force` | `--set-vcp` | Allow a high-impact VCP write. Such writes require a target that resolves to exactly one display; lower-risk multi-target VCP writes do not require `--force`. |
 | `--verify` / `--no-verify` | `--set-vcp` | Override VCP readback verification. Verification is skipped for commands that can change input or power state. |
 | `--source <name>` | brightness set/adjust/refresh and all temperature commands | Use `cli` or omit source for manual control. Other names identify cooperative controllers. Temperature considers temperature ownership only, not brightness ownership. Temperature refresh requires an explicit non-`cli` name; named temperature resume retires only that source. Contrast does not accept source. |
 | `--timeout <ms>` | IPC commands | Override the Local automation timeout. |
@@ -134,7 +136,7 @@ For scripts, add JSON:
 
 ### Direct Named-Pipe Temperature Requests
 
-Raw named-pipe command names omit the CLI's leading dashes. Use `temperature` as the value field for set/refresh commands and `adjustTemperature` for adjustments. `temperatureUnit` is `native` or `kelvin`, with omission meaning native. Send one `target` or a `targets` array, not both.
+The raw `command` names omit the CLI's leading dashes. Set and refresh requests put their value in the `temperature` field; adjustment requests put their delta in `adjustTemperature`. `temperatureUnit` is `native` or `kelvin`, with omission meaning native. Send one `target` or a `targets` array, not both.
 
 ```json
 {"apiVersion":1,"command":"set-temperature","target":"dd_your_stable_id","temperature":4000,"temperatureUnit":"kelvin","source":"desk-temperature"}
@@ -320,6 +322,22 @@ Use a longer timeout:
 DisplayDimmer.Cli.exe --set-brightness 70 --target dd_your_stable_id --timeout 10000
 ```
 
+## Conditional Brightness Automation Resume (API 1.2)
+
+An ordinary `--set-brightness ... --source cli` interrupts an active schedule or app rule. API 1.2 adds a CLI way for a temporary controller to release **that manual interruption** without writing a stale pre-override level:
+
+```powershell
+DisplayDimmer.Cli.exe --resume-automation --target dd_your_stable_id --expected-brightness 20 --json
+```
+
+The equivalent named-pipe request is `{"apiVersion":1,"command":"resume-automation","target":"dd_your_stable_id","expectedBrightness":20}`.
+
+For a temporary script override, use the stable physical display target ID returned by `--get-state` so the script can confirm it is resuming the same display. The CLI also accepts the other supported target forms, including multiple displays. The command compares the app's **tracked** brightness with `--expected-brightness` for each resolved display. On a mismatch, that display returns `expectedBrightnessMismatch` and retains its existing ownership state. On success, Display Dimmer clears that display's brightness schedule/app-rule interruption and requests a fresh rule evaluation; `"Resume requested"` does not promise that a rule is still active or that hardware has already finished moving. Poll `--get-state` to observe the resulting level and owner. The command does not write brightness, change saved settings, or release a temperature override. It does not accept `--source` or `--save`.
+
+This differs from the pre-existing named-source handoff: `--set-brightness ... --source <name>` stands down when a schedule or app rule owns brightness and remembers a fresh external value for later handoff. It does not dim the display during that rule and does not clear a manual `--source cli` interruption. The 2.2.10 app supports that cooperative handoff, but its CLI cannot explicitly release a manual brightness interruption.
+
+Only use `--resume-automation` after recording that the target was *not already interrupted* before your temporary override. The level comparison protects against a different later level, but cannot distinguish another manual action that happened to choose the same percentage. A newer manual action at that same percentage is an unresolved ambiguity; automation clients should avoid blindly releasing another user's intervention.
+
 ## Temperature Control (API 1.1)
 
 Temperature commands use the same software/gamma color control as Display Dimmer's Temperature slider. They leave hardware brightness, contrast, DDC preferences, and brightness-rule interruption state unchanged. They do not edit schedules or app rules. Local automation still requires Pro and explicit opt-in; the free temperature preview does not unlock the CLI server. Hiding the Temperature slider does not disable CLI temperature control.
@@ -376,9 +394,9 @@ DisplayDimmer.Cli.exe --update-external-temperature 4000 --temperature-unit kelv
 
 Named set/adjust applies when temperature is available for external control; while a temperature rule or manual temperature override owns the display, it defers and refreshes the handoff intent instead. Refresh-only always records standby intent without applying gamma, taking visible ownership, changing saved/session baselines, or interrupting rules. It requires an explicit named, non-`cli` source.
 
-The app remembers the latest accepted external temperature intent per physical display, not a stack of source values. Relative named adjustments use that source's applicable current intent; otherwise they start from the effective temperature. Do not use brightness fields such as `scheduleActive` or `perAppInterrupted` to infer temperature ownership. Inspect `temperatureOwner` and `temperatureAutomationInterrupted`; see the [controller example](../examples/temperature-controller/).
+The app remembers the latest accepted external temperature intent per physical display, not a stack of source values. Relative named adjustments use that source's applicable current intent; otherwise they start from the effective temperature. Do not use brightness fields such as `scheduleActive` or `perAppInterrupted` to infer temperature ownership. Inspect `temperatureOwner` and `temperatureAutomationInterrupted`.
 
-Freshness lasts **five seconds**. Refresh desired intent regularly while standing by (the example uses one second). Expiration removes eligibility for a future handoff, not an already-applied tint. If a controller stops while its tint remains unowned, that tint can remain visible. Once a temperature rule or manual action replaces it, an expired external tint must not return. A releasing rule hands off directly to fresh external intent, otherwise to the unsaved manual session baseline or saved temperature.
+Freshness lasts **five seconds**. Refresh desired intent regularly while standing by. Expiration removes eligibility for a future handoff, not an already-applied tint. If a controller stops while its tint remains unowned, that tint can remain visible. Once a temperature rule or manual action replaces it, an expired external tint must not return. A releasing rule hands off directly to fresh external intent, otherwise to the unsaved manual session baseline or saved temperature.
 
 State reports fresh external intent separately from current intended temperature. A fresh intent can be deferred, and an already-applied external tint can remain after `externalTemperatureActive` becomes false. Heartbeat timestamps are not watch events.
 
@@ -565,13 +583,13 @@ DisplayDimmer.Cli.exe --get-state --target dd_your_stable_id --pretty
 
 ## JSON Response Shape
 
-Every structured response includes:
+A current running-server response has this shape:
 
 ```json
 {
   "apiVersion": 1,
-  "apiRevision": "1.1",
-  "capabilities": ["temperature", "temperature-kelvin", "external-temperature"],
+  "apiRevision": "1.2",
+  "capabilities": ["temperature", "temperature-kelvin", "external-temperature", "resume-automation"],
   "success": true,
   "partial": false,
   "exitCode": 0,
@@ -588,7 +606,7 @@ Every structured response includes:
 
 `linkedGroups` is used by `--list-displays`, `--get-state`, and `--watch` snapshots for linked display group targets. It is separate from `displays` so existing scripts that enumerate physical displays keep the same meaning.
 
-`results` is used by brightness, contrast, temperature, external-brightness, external-temperature, DDC preference, and VCP commands.
+`results` is used by brightness, contrast, temperature, external-intent refresh, automation resume, DDC preference, and VCP commands.
 
 ## Display Fields
 
@@ -733,6 +751,8 @@ For example, a cooperative request for 4000 K may resolve to native `-50` while 
 }
 ```
 
+Client-generated errors (for example, when the app cannot be reached) and responses from older running apps may omit `apiRevision` and `capabilities`. Do not treat missing capability metadata as support for an extension.
+
 This is an illustrative result fragment. Always check the response exit code, overall `success`/`partial`, and every item in `results`. A queued save is not a disk-write guarantee; a target can also disappear before queued gamma work executes.
 
 ## VCP Result Fields
@@ -841,7 +861,7 @@ After a manual/script override:
 }
 ```
 
-The schedule still matches the current time, but this display is being held by a manual/script override. To resume schedules from the UI, open Schedules and click Apply. Display Dimmer clears the interruption and forces the scheduler to reassert the active rule.
+The schedule still matches the current time, but this display is being held by a manual/script override. To return control to a still-active rule, choose **Resume automation** in the main window or use the guarded API 1.2 command above. An interrupted schedule's pause expires when that schedule session ends without forcing the brightness back to an older value; a new schedule session can take over normally. An interrupted app rule is released when its matching app-rule session ends.
 
 ### Cooperative External Automation Mode
 
@@ -865,7 +885,7 @@ Use this mode when a script should dim or restore immediately even if a schedule
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source cli
 ```
 
-This behaves like moving the Display Dimmer slider or using a hotkey. It interrupts schedules and suspends app rules for the targeted display identities until you resume them or the relevant rule is reapplied.
+This behaves like moving the Display Dimmer slider or using a hotkey. It interrupts schedules and suspends app rules for the targeted display identities until you resume them or the interrupted rule session ends.
 
 ### Cooperative Sensor
 
@@ -971,18 +991,18 @@ DisplayDimmer.Cli.exe --watch --json
 
 `--watch` emits JSON Lines: one compact JSON object per line. Parse each line as a separate JSON document; do not try to parse the whole command output as one JSON array.
 
-The stream starts with a `snapshot` event, then emits `stateChanged` only when Display Dimmer's tracked state changes. Display entries use the same fields as `--get-state`, including brightness/contrast, separate temperature value/ownership/availability, and fresh external intent. API 1.1 watch envelopes advertise the same `apiRevision` and `capabilities` as one-shot responses. Existing brightness automation fields do not describe temperature ownership.
+The stream starts with a `snapshot` event, then emits `stateChanged` only when Display Dimmer's tracked state changes. Display entries use the same fields as `--get-state`, including brightness/contrast, separate temperature value/ownership/availability, and fresh external intent. Watch envelopes advertise the same `apiRevision` and `capabilities` as one-shot responses. Existing brightness automation fields do not describe temperature ownership.
 
 Initial snapshot shape:
 
 ```json
-{"apiVersion":1,"apiRevision":"1.1","capabilities":["temperature","temperature-kelvin","external-temperature"],"event":"snapshot","timestampUtc":"2026-09-06T00:00:00Z","state":{"automationInterrupted":false,"displays":[]}}
+{"apiVersion":1,"apiRevision":"1.2","capabilities":["temperature","temperature-kelvin","external-temperature","resume-automation"],"event":"snapshot","timestampUtc":"2026-09-06T00:00:00Z","state":{"automationInterrupted":false,"displays":[]}}
 ```
 
 State change shape:
 
 ```json
-{"apiVersion":1,"apiRevision":"1.1","capabilities":["temperature","temperature-kelvin","external-temperature"],"event":"stateChanged","timestampUtc":"2026-09-06T00:00:01Z","state":{"automationInterrupted":true,"displays":[]}}
+{"apiVersion":1,"apiRevision":"1.2","capabilities":["temperature","temperature-kelvin","external-temperature","resume-automation"],"event":"stateChanged","timestampUtc":"2026-09-06T00:00:01Z","state":{"automationInterrupted":true,"displays":[]}}
 ```
 
 PowerShell example:
@@ -1114,10 +1134,16 @@ JSON output:
 
 ```json
 {
+  "apiVersion": 1,
   "success": false,
+  "partial": false,
   "exitCode": 2,
   "errorCode": "appUnavailable",
-  "message": "Display Dimmer is not running, not ready, Local automation is locked, or Local automation is turned off. Open Display Dimmer > Settings > General > Advanced > Local automation > Manage..., unlock Pro if prompted, and turn on Local automation."
+  "message": "Display Dimmer is not running, not ready, Local automation is locked, or Local automation is turned off. Open Display Dimmer > Settings > General > Advanced > Local automation > Manage..., unlock Pro if prompted, and turn on Local automation.",
+  "automationInterrupted": false,
+  "displays": [],
+  "linkedGroups": [],
+  "results": []
 }
 ```
 
@@ -1259,6 +1285,14 @@ For temperature-capable API 1.1 servers, add:
 ```
 
 Use `--save` only when you explicitly want to change saved Display Dimmer brightness or manual temperature settings. Check the running server's capabilities before using the temperature extension; integer wire protocol version `1` alone does not establish support.
+
+For API 1.2 servers that advertise `resume-automation`, a temporary manual dim can also use:
+
+```powershell
+--resume-automation --target <stable-display-id> --expected-brightness <temporary-level> --json
+```
+
+Record an active, unpaused rule before the dim and check the same display's tracked level before requesting this release; see [Conditional Brightness Automation Resume](#conditional-brightness-automation-resume-api-12).
 
 Use VCP commands only for advanced monitor-specific workflows:
 

@@ -2,7 +2,7 @@
 
 This example is the LCD version of the Arduino motion sensor bridge.
 
-This bridge and LCD status remain brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the separate [temperature controller example](../temperature-controller/) and its temperature-specific capability, standby, and release handling. The LCD bridge does not accept temperature options.
+This bridge and LCD status remain brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the [temperature command reference](../../docs/cli-api-v1.md#temperature-control-api-11). The LCD bridge does not accept temperature options.
 
 It reads a digital motion sensor from an Arduino Uno, controls Display Dimmer from PowerShell, and sends status lines back to the Arduino so a Nokia 5110 / PCD8544 LCD can show bridge state and brightness.
 
@@ -156,9 +156,12 @@ PowerShell bridge scripts use one-dash parameters such as `-Port COM7` and `-Tar
 The LCD bridge uses the same motion behavior as the plain bridge:
 
 - no motion for the idle period dims the target display
-- motion restores the brightness captured before dimming
-- by default, no-motion dimming acts like a manual Display Dimmer command and can interrupt schedules or app rules
+- motion restores captured brightness when no rule owned the display before dimming
+- by default, no-motion dimming can temporarily interrupt an active schedule or app rule on one stable physical `dd_...` target; motion calls guarded `--resume-automation` so that rule can reassert its current level
+- the bridge requires a running app with the `resume-automation` capability for that case; with an older app or `primary`/`all`/linked-group target it stands by rather than leave an active rule interrupted
 - `-CooperateWithAutomation` makes the bridge stand by while a schedule or app rule owns the target
+
+An explicit `-RestoreBrightness` of 0–100 remains a fixed manual restore instead of conditional automation resume. With an active rule, fixed mode requires one matching stable physical `dd_...` target; aliases and groups stand by. The rule remains manually interrupted after the fixed restore. A pre-existing manual pause detected before dimming is not cleared. The bridge leaves a newer brightness change or a rule that takes ownership unpaused during idle alone. The expected-percentage guard cannot distinguish a later manual action at the same idle level without an ownership token.
 
 The only extra behavior is serial feedback to the Arduino LCD. The bridge always sends LCD status when the serial port is open.
 
@@ -172,7 +175,7 @@ The only extra behavior is serial feedback to the Arduino LCD. The bridge always
 | `IdleMinutes` | `2` | minutes without motion before dimming |
 | `IdleSeconds` | `0` | optional seconds override for quick tests |
 | `DimBrightness` | `20` | brightness to apply after idle |
-| `RestoreBrightness` | `-1` | optional fixed restore brightness; `-1` means restore captured brightness |
+| `RestoreBrightness` | `-1` | optional fixed manual restore brightness; `-1` restores captured brightness or resumes a rule temporarily interrupted by this bridge |
 | `AutomationPollIntervalMs` | `1000` | how often the bridge refreshes Display Dimmer state |
 | `DryRun` | `false` | print behavior without calling Display Dimmer |
 | `CooperateWithAutomation` | `false` | stand by while schedules or app rules own the target |
@@ -187,7 +190,7 @@ Use Windows Task Scheduler when you want the LCD motion bridge to start every ti
 Recommended arguments:
 
 ```text
--NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-motion-sensor-lcd\Start-ArduinoMotionSensorLcdBridge.ps1" -Port COM7 -Target dd_your_stable_id
+-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-motion-sensor-lcd\Start-ArduinoMotionSensorLcdBridge.ps1" -Port COM7 -Target dd_your_stable_id
 ```
 
 Use "Run only when user is logged on" and run the task as the same Windows user as Display Dimmer. Display Dimmer and the bridge need the interactive Windows user session.

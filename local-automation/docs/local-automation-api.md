@@ -6,6 +6,8 @@ Local automation is a Display Dimmer Pro feature.
 
 Display Dimmer 2.2.10 adds temperature and blue light filter control through API **1.1**. The compatible wire protocol stays at `apiVersion: 1`, and `--api-version` still prints `1`. Use the running app's JSON `apiRevision` and `capabilities` to detect temperature support; missing metadata from an older app is not support.
 
+Display Dimmer **2.2.11** adds conditional brightness automation resume in API **1.2**. Basic idle dim/restore of displays without an active rule works with 2.2.10; dimming through an active rule and then resuming it requires a running 2.2.11 or later app advertising `resume-automation`.
+
 This works well for:
 
 - PowerShell scripts
@@ -65,7 +67,8 @@ DisplayDimmer.Cli.exe --set-brightness 70 --target dd_your_stable_id --json
 | Adjust brightness up/down | `--adjust-brightness <-100..100> --target <target>` | Live-only unless `--save` is added. |
 | Save brightness as the Display Dimmer setting | `--set-brightness <0-100> --target <target> --save` | Changes saved app settings. |
 | Override schedules/app rules | `--set-brightness <0-100> --target <target> --source cli` | Same behavior when `--source` is omitted. |
-| Cooperate with schedules/app rules | `--set-brightness <0-100> --target <target> --source <name>` | Applies only when Display Dimmer automation does not already own the target. |
+| Request brightness automation resume | `--resume-automation --target <target> --expected-brightness <0-100>` | If tracked brightness matches, clears the brightness interruption and requests rule reevaluation. Use only after recording that your temporary override interrupted an unpaused rule. API 1.2. |
+| Cooperate with schedules/app rules | `--set-brightness <0-100> --target <target> --source <name>` | Applies when no rule owns brightness; otherwise stands down and refreshes handoff intent. |
 | Keep a sensor handoff value fresh | `--update-external-brightness <0-100> --target <target> --source <name>` | Does not move the display or interrupt automation. |
 | Set warmer screen colors | `--set-temperature 4000 --temperature-unit kelvin --target <target>` | Temporary by default; manual temperature-only control. |
 | Adjust warmth | `--adjust-temperature -200 --temperature-unit kelvin --target <target>` | Negative Kelvin deltas select warmer colors. |
@@ -106,7 +109,7 @@ DisplayDimmer.Cli.exe --adjust-brightness -10 --target dd_your_stable_id
 DisplayDimmer.Cli.exe --get-state --target all --pretty
 ```
 
-Brightness changes are live-only by default. Add `--save` only for scripts that should change saved Display Dimmer settings. `--save` is a settings write, not a cooperative sensor handoff.
+Brightness changes are live-only by default. Add `--save` only for scripts that should change saved Display Dimmer settings. `--save` is a settings write, not a cooperative sensor handoff. For a temporary manual dim, record that an active rule was unpaused before the write; only then use `--resume-automation --target <id> --expected-brightness <temporary-level>` to let the rule reassert. The command checks the tracked level, not who made the latest write. It writes no brightness and does not release temperature control. Check the running app's `resume-automation` capability first.
 
 ## Temperature And Blue Light Filtering
 
@@ -153,7 +156,7 @@ Named resume retires only that source's current temperature intent/applied value
 
 Use `temperatureOwner`, `temperatureAutomationInterrupted`, and `externalTemperatureActive` rather than brightness automation flags to decide temperature standby. Inspect `temperatureDisposition` and `effectiveTemperature` in results: success can mean deferred intent rather than a visible change. All targets, including linked groups, return per-physical-display results.
 
-See the [complete temperature contract](cli-api-v1.md#temperature-control-api-11) and [working cooperative controller](../examples/temperature-controller/) for feature detection, polling, and source-safe release.
+See the [complete temperature contract](cli-api-v1.md#temperature-control-api-11) for feature detection, polling, and source-safe release.
 
 ## Advanced Monitor Commands
 
@@ -244,6 +247,8 @@ DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source cl
 Use `--set-brightness ... --source <name>` when the script is a cooperative external controller such as a light sensor. The source name is just a stable caller label; it does not save settings or grant special access. If no schedule or app rule owns the target, the command can apply immediately. If Display Dimmer automation already owns the target, the command stands down and refreshes the external handoff value instead of interrupting the rule.
 
 For presence or no-motion dimming, prefer manual override mode unless you explicitly want schedules and app rules to win. An empty-room dimmer is usually a user-intent override, not a cooperative brightness handoff.
+
+On occupancy return, a temporary manual dimmer can ask Display Dimmer to release the brightness interruption with API 1.2 `--resume-automation`, provided it recorded an unpaused rule before dimming and the target still has the expected idle level. The level check cannot distinguish a newer user action at that same percentage. A numeric restore is another manual write and does not resume the rule. If the interrupted rule session has already ended, Display Dimmer clears its interruption automatically; a later distinct session can take control. Check the running app's capability; named-source cooperative handoff is the pre-existing alternative only when an active rule is allowed to keep control during the idle period.
 
 ```powershell
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source desk-light-sensor
@@ -337,7 +342,6 @@ For app privacy information, see [Display Dimmer privacy](https://displaydimmer.
 
 See:
 
-- [Cooperative temperature controller](../examples/temperature-controller)
 - [Automation recipes](../examples/automation-recipes)
 - [C# client](../examples/csharp-client)
 - [Task Scheduler](../examples/task-scheduler)
@@ -346,4 +350,4 @@ See:
 - [Arduino light sensor](../examples/arduino-light-sensor)
 - [Arduino motion sensor](../examples/arduino-motion-sensor)
 
-Full technical reference: [CLI/API 1.1 reference (wire protocol 1)](cli-api-v1.md).
+Full technical reference: [CLI/API 1.2 reference (wire protocol 1)](cli-api-v1.md).

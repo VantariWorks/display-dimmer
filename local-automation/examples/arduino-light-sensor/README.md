@@ -8,9 +8,9 @@ It reads an analog light sensor from an Arduino Uno, converts the room-light rea
 
 For the command reference, see:
 
-[CLI/API 1.1 reference (wire protocol 1)](../../docs/cli-api-v1.md)
+[CLI/API 1.2 reference (wire protocol 1)](../../docs/cli-api-v1.md)
 
-This Arduino bridge remains brightness-only. For independent color-temperature/blue-light-filter automation in API 1.1, see the separate [temperature controller example](../temperature-controller/); it includes capability detection and temperature-specific standby/release behavior.
+This Arduino bridge remains brightness-only. For independent color-temperature/blue-light-filter automation in API 1.1, see the [temperature command reference](../../docs/cli-api-v1.md#temperature-control-api-11); temperature ownership and release are separate from brightness.
 
 The bridge handles Display Dimmer schedules and app rules, so those automations do not immediately fight the sensor.
 
@@ -450,7 +450,7 @@ Use Windows Task Scheduler when you want the bridge to start every time you sign
 Before creating the task, make sure this manual command works:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
 ```
 
 Recommended Task Scheduler settings:
@@ -462,8 +462,8 @@ Recommended Task Scheduler settings:
 | Security option | Run only when user is logged on |
 | Delay task for | 30 seconds |
 | Program/script | `powershell.exe` |
-| Arguments | `-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id` |
-| Start in | `C:\Path\To\display-dimmer\local-automation` |
+| Arguments | `-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id` |
+| Start in | `C:\Path\To\display-dimmer-local-automation` |
 | If the task fails | restart every 1 minute, 3 times |
 | If task is already running | do not start a new instance |
 
@@ -472,13 +472,13 @@ Do not use "Run whether user is logged on or not" for display-control tasks. Dis
 After the task works, you can hide the PowerShell window by adding `-WindowStyle Hidden` before `-NoProfile`:
 
 ```text
--WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
+-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id
 ```
 
 If `DisplayDimmer.Cli.exe` is not available through the Windows app execution alias, pass the exact CLI path with `-CliPath`:
 
 ```text
--NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer\local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id -CliPath "C:\Path\To\DisplayDimmer.Cli.exe"
+-NoProfile -ExecutionPolicy Bypass -File "C:\Path\To\display-dimmer-local-automation\examples\arduino-light-sensor\Start-ArduinoLightSensorBridge.ps1" -Port COM7 -Target dd_your_stable_id -CliPath "C:\Path\To\DisplayDimmer.Cli.exe"
 ```
 
 For startup reliability:
@@ -634,6 +634,8 @@ Display Dimmer automation ended. Sensor bridge is taking control again.
 That prevents the bridge from immediately pausing a resumed schedule/app rule, while still keeping the sensor ready when automation releases the display. If the bridge stops or the heartbeat goes stale, Display Dimmer falls back to its normal saved/manual restore behavior.
 
 If you intentionally want the sensor to override schedules and app rules, run with `-IgnoreAutomationResume -Source cli`. That mode behaves like moving the Display Dimmer slider or using a hotkey: it interrupts schedules and suspends app rules for the targeted displays.
+
+API 1.2 `--resume-automation` releases a temporary manual brightness interruption. This continuous sensor bridge has no end-of-override event in `-IgnoreAutomationResume` mode, so it does not call that command. Its default named-source mode already cooperates with rule handoff and needs no manual release.
 
 ## Troubleshooting
 

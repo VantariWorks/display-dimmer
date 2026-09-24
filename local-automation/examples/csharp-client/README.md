@@ -4,7 +4,7 @@ This sample is for developers building a local Display Dimmer integration. It is
 
 The sample shows how a C# app can call `DisplayDimmer.Cli.exe`, read JSON output, choose a display, send a brightness command, and then read state back.
 
-This C# sample remains brightness-only. For an API 1.1 temperature integration, use the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) and separate [temperature controller example](../temperature-controller/) for running-server capability detection, native/Kelvin values, and temperature-specific ownership/release.
+This C# sample remains brightness-only. For an API 1.1 temperature integration, use the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) for running-server capability detection, native/Kelvin values, and temperature-specific ownership/release.
 
 ## What It Does
 
@@ -49,3 +49,5 @@ Arguments:
 Call `DisplayDimmer.Cli.exe` from external tools and let the running Display Dimmer app handle monitor control, DDC/CI, software dimming, display identity, schedules, app rules, and automation handoff.
 
 The CLI is the supported boundary. Client apps should not talk to monitors directly or duplicate Display Dimmer's display identity logic.
+
+This one-shot sample uses a named source, so the existing cooperative handoff stands down while a schedule or app rule owns brightness. It does not create a temporary manual interruption and does not call API 1.2 `--resume-automation`. A client that deliberately uses `--source cli` for a temporary dim must record the prior unpaused owner, check the running app's capability, and conditionally release only its own override; see the [toggle recipe](../automation-recipes/#toggle-dim-and-restore-one-display).

@@ -19,9 +19,11 @@ Display Dimmer provides convenient brightness and contrast controls for external
 - Preserve relative brightness levels when adjusting all displays
 - Use DDC/CI hardware brightness control where supported
 - Use software dimming when hardware control is unavailable or unreliable
+- Adjust software contrast and preview color temperature for 30 minutes a day; Pro unlocks unlimited temperature control
 - Enable or disable DDC/CI separately for each display
 - Create scheduled brightness rules
 - Create app-based and fullscreen app rules
+- See when a manual brightness change pauses a rule and resume automation from the main window
 - Use global hotkeys for brightness, contrast, and display actions
 - Use supported physical brightness keys
 - Use CLI and local automation with PowerShell, AutoHotkey, Task Scheduler, Stream Deck, and other tools
@@ -31,7 +33,7 @@ Display Dimmer provides convenient brightness and contrast controls for external
 
 ## DDC/CI and Software Dimming
 
-Display Dimmer supports DDC/CI monitor control where available. DDC/CI allows Windows software to adjust a monitor's hardware brightness and contrast settings directly.
+Display Dimmer supports DDC/CI monitor control where available. DDC/CI allows Windows software to adjust a monitor's hardware brightness directly; Display Dimmer's normal contrast control is software-based.
 
 DDC/CI support depends on the monitor, cable, dock, adapter, GPU, and display configuration. Some monitors require DDC/CI to be enabled in the monitor's built-in menu, while some displays do not support hardware brightness control at all.
 
@@ -43,7 +45,9 @@ Display Dimmer can adjust monitor brightness automatically based on the time of 
 
 Schedules are useful for day and night brightness changes. App rules are useful for games, video players, design tools, presentations, and other programs that benefit from a different brightness level.
 
-When an automation rule ends, Display Dimmer restores the previous brightness level so the display setup remains predictable.
+When an automation rule ends normally, Display Dimmer restores the previous brightness level so the display setup remains predictable.
+
+If a manual brightness adjustment interrupts an active schedule or app rule, the main window shows the interruption and offers **Resume automation**. When that interrupted session ends, Display Dimmer keeps the user's current levels and clears the interruption, allowing a later session to take control normally.
 
 ## Global Hotkeys and Brightness Keys
 
@@ -54,6 +58,8 @@ Display Dimmer also supports physical brightness keys on compatible keyboards an
 ## Local Automation
 
 Display Dimmer Pro can be controlled locally from PowerShell, AutoHotkey, Task Scheduler, Stream Deck, Arduino sensor projects, and other tools.
+
+API 1.2 adds a guarded `--resume-automation` command so a script can return control to a previously active rule after a temporary manual brightness change. The wire protocol remains version 1; check the running app's advertised capabilities before using the command.
 
 [View the Display Dimmer Local Automation documentation and examples](local-automation/README.md)
 
@@ -67,6 +73,7 @@ Display Dimmer Pro is an optional one-time upgrade that unlocks:
 - More global hotkeys
 - Per-display automation and hotkey targeting
 - Linked display groups
+- Unlimited color-temperature control and a blue light filter
 - Advanced display controls
 - All Pro themes
 

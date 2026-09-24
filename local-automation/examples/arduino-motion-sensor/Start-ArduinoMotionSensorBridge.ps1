@@ -105,12 +105,20 @@ function Clamp-Int {
 function New-DisplayRuntimeState {
     param(
         [string]$Automation = "unknown",
-        $Brightness = $null
+        $Brightness = $null,
+        [string]$ResumeTargetId = "",
+        [bool]$ResumeSupported = $false,
+        [bool]$AnyRuleActive = $false,
+        [bool]$AnyInterruption = $false
     )
 
     [pscustomobject]@{
         Automation = $Automation
         Brightness = $Brightness
+        ResumeTargetId = $ResumeTargetId
+        ResumeSupported = $ResumeSupported
+        AnyRuleActive = $AnyRuleActive
+        AnyInterruption = $AnyInterruption
     }
 }
 
@@ -120,7 +128,7 @@ function Get-DisplayRuntimeState {
         # The bridge still needs this in override mode so restore can use the
         # live brightness captured just before idle dimming.
         if ($DryRun) {
-            return New-DisplayRuntimeState -Automation "none"
+            return New-DisplayRuntimeState -Automation "none" -Brightness 100
         }
 
         if (-not (Test-CliAvailable -Path $CliPath)) {
@@ -138,22 +146,36 @@ function Get-DisplayRuntimeState {
         }
 
         $state = $stateText | ConvertFrom-Json
-        if ($null -eq $state -or $null -eq $state.displays) {
+        if ($null -eq $state -or $state.success -ne $true -or $null -eq $state.displays) {
             return New-DisplayRuntimeState -Automation "unknown"
         }
+
+        $displays = @($state.displays)
+        $resumeTargetId = ""
+        if ($displays.Count -eq 1 -and [string]$displays[0].targetId -like "dd_*" -and
+            [string]$displays[0].targetId -eq $Target) {
+            $resumeTargetId = [string]$displays[0].targetId
+        }
+        $hasPriorInterruption = @($displays | Where-Object {
+            $_.scheduleInterrupted -eq $true -or $_.perAppInterrupted -eq $true
+        }).Count -gt 0
+        $resumeSupported = (@($state.capabilities) -contains "resume-automation") -and -not $hasPriorInterruption
+        $anyRuleActive = @($displays | Where-Object {
+            $_.scheduleActive -eq $true -or $_.perAppActive -eq $true
+        }).Count -gt 0
 
         $scheduleTakingControl = $false
         $automationInterrupted = $false
         $liveBrightness = $null
 
-        foreach ($display in @($state.displays)) {
+        foreach ($display in $displays) {
             if ($null -eq $liveBrightness -and $null -ne $display.brightness) {
                 $liveBrightness = [int]$display.brightness
             }
 
             $perAppTakingControl = $display.perAppActive -eq $true -and $display.perAppInterrupted -ne $true
             if ($perAppTakingControl) {
-                return New-DisplayRuntimeState -Automation "app-rule" -Brightness $liveBrightness
+                return New-DisplayRuntimeState -Automation "app-rule" -Brightness $liveBrightness -ResumeTargetId $resumeTargetId -ResumeSupported $resumeSupported -AnyRuleActive $anyRuleActive -AnyInterruption $hasPriorInterruption
             }
 
             if ($display.perAppInterrupted -eq $true) {
@@ -170,14 +192,14 @@ function Get-DisplayRuntimeState {
         }
 
         if ($scheduleTakingControl) {
-            return New-DisplayRuntimeState -Automation "schedule" -Brightness $liveBrightness
+            return New-DisplayRuntimeState -Automation "schedule" -Brightness $liveBrightness -ResumeTargetId $resumeTargetId -ResumeSupported $resumeSupported -AnyRuleActive $anyRuleActive -AnyInterruption $hasPriorInterruption
         }
 
         if ($automationInterrupted) {
-            return New-DisplayRuntimeState -Automation "manual-override" -Brightness $liveBrightness
+            return New-DisplayRuntimeState -Automation "manual-override" -Brightness $liveBrightness -ResumeTargetId $resumeTargetId -ResumeSupported $resumeSupported -AnyRuleActive $anyRuleActive -AnyInterruption $hasPriorInterruption
         }
 
-        return New-DisplayRuntimeState -Automation "none" -Brightness $liveBrightness
+        return New-DisplayRuntimeState -Automation "none" -Brightness $liveBrightness -ResumeTargetId $resumeTargetId -ResumeSupported $resumeSupported -AnyRuleActive $anyRuleActive -AnyInterruption $hasPriorInterruption
     }
     catch {
         return New-DisplayRuntimeState -Automation "unknown"
@@ -226,6 +248,20 @@ function Send-BrightnessCommand {
     }
 }
 
+function Send-ResumeCommand {
+    param([string]$ResumeTargetId)
+
+    if ($DryRun) {
+        return [pscustomobject]@{ ExitCode = 0; OutputText = "dry-run" }
+    }
+
+    $output = & $CliPath --resume-automation --target $ResumeTargetId --expected-brightness $DimBrightness --json
+    return [pscustomobject]@{
+        ExitCode = $LASTEXITCODE
+        OutputText = ($output -join " ").Trim()
+    }
+}
+
 function Clear-BufferedSerialInput {
     try {
         if ($null -ne $serial -and $serial.IsOpen) {
@@ -268,6 +304,9 @@ $lastRuntimeState = New-DisplayRuntimeState -Automation "unknown"
 $lastStatusLogAt = [DateTime]::MinValue
 $dimmedByBridge = $false
 $capturedRestoreBrightness = $null
+$capturedResumeTargetId = ""
+$capturedRestoreTargetId = ""
+$lastResumeAttemptAt = [DateTime]::MinValue
 
 Write-Host "Opening $Port at $BaudRate baud. Close Arduino Serial Monitor first."
 Write-Host "Target=$Target IdleSeconds=$idleDurationSeconds DimBrightness=$DimBrightness RestoreBrightness=$RestoreBrightness AutomationPollMs=$AutomationPollIntervalMs Source=$Source CommandSource=$(Get-CommandSource) DryRun=$DryRun CooperateWithAutomation=$CooperateWithAutomation IgnoreAutomation=$IgnoreAutomation"
@@ -326,6 +365,83 @@ try {
                         Write-Host ("Motion detected, but Display Dimmer {0} automation is in control. Restore is standing by." -f $lastRuntimeState.Automation)
                         $lastStatusLogAt = $now
                     }
+                    continue
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($capturedResumeTargetId)) {
+                    if (($now - $lastResumeAttemptAt).TotalSeconds -lt 2) {
+                        continue
+                    }
+                    $lastResumeAttemptAt = $now
+                    $current = Get-DisplayRuntimeState
+                    if ($current.ResumeTargetId -ne $capturedResumeTargetId -or $null -eq $current.Brightness) {
+                        Write-Host "Motion detected. Waiting for the same stable display and live brightness before resuming automation."
+                        continue
+                    }
+                    if ($null -ne $current.Brightness -and [int]$current.Brightness -ne $DimBrightness) {
+                        Write-Host "Motion detected. Brightness changed after the idle dim; leaving the newer setting and automation state alone."
+                        $dimmedByBridge = $false
+                        $capturedResumeTargetId = ""
+                        $capturedRestoreBrightness = $null
+                        continue
+                    }
+
+                    $result = Send-ResumeCommand -ResumeTargetId $capturedResumeTargetId
+                    Write-Host ("motion=1 resumeAutomation={0} exit={1} {2}" -f $capturedResumeTargetId, $result.ExitCode, $result.OutputText)
+                    if ($result.ExitCode -eq 0) {
+                        Start-Sleep -Milliseconds 300
+                        $afterResume = Get-DisplayRuntimeState
+                        if ($afterResume.Automation -eq "none" -and -not $afterResume.AnyRuleActive -and $null -ne $afterResume.Brightness -and
+                            [int]$afterResume.Brightness -eq $DimBrightness -and $null -ne $capturedRestoreBrightness) {
+                            # The original rule ended while idle. Restore only if
+                            # the display still has our dim level.
+                            $beforeFallback = Get-DisplayRuntimeState
+                            if ($beforeFallback.Automation -ne "none" -or $beforeFallback.AnyRuleActive -or
+                                $beforeFallback.ResumeTargetId -ne $capturedResumeTargetId -or
+                                $null -eq $beforeFallback.Brightness -or
+                                [int]$beforeFallback.Brightness -ne $DimBrightness) {
+                                continue
+                            }
+                            $fallback = Send-BrightnessCommand -Brightness ([int]$capturedRestoreBrightness)
+                            Write-Host ("motion=1 restoreAfterRuleEnded={0} exit={1} {2}" -f $capturedRestoreBrightness, $fallback.ExitCode, $fallback.OutputText)
+                            if ($fallback.ExitCode -ne 0) {
+                                continue
+                            }
+                        }
+                        if (($afterResume.Automation -eq "schedule" -or $afterResume.Automation -eq "app-rule" -or
+                            $afterResume.Automation -eq "none") -and -not $afterResume.AnyInterruption) {
+                            $dimmedByBridge = $false
+                            $capturedResumeTargetId = ""
+                            $capturedRestoreBrightness = $null
+                            Clear-BufferedSerialInput
+                        }
+                    }
+                    continue
+                }
+
+                $current = Get-DisplayRuntimeState
+                if ($current.Automation -eq "unknown" -or $null -eq $current.Brightness) {
+                    continue
+                }
+                if ($current.AnyRuleActive -and $current.Automation -eq "manual-override" -and
+                    ($RestoreBrightness -lt 0 -or [string]::IsNullOrWhiteSpace($capturedRestoreTargetId) -or
+                     $current.ResumeTargetId -ne $capturedRestoreTargetId)) {
+                    if (($now - $lastStatusLogAt).TotalMilliseconds -ge 5000) {
+                        Write-Host "Motion detected. A rule is active but interrupted; waiting rather than sending another manual restore."
+                        $lastStatusLogAt = $now
+                    }
+                    continue
+                }
+                if (Automation-OwnsDisplay -Automation $current.Automation) {
+                    Write-Host "Motion detected. Automation took control while idle; leaving its brightness unchanged."
+                    $dimmedByBridge = $false
+                    $capturedRestoreBrightness = $null
+                    continue
+                }
+                if ($null -ne $current.Brightness -and [int]$current.Brightness -ne $DimBrightness) {
+                    Write-Host "Motion detected. Brightness changed while idle; leaving the newer level unchanged."
+                    $dimmedByBridge = $false
+                    $capturedRestoreBrightness = $null
                     continue
                 }
 
@@ -391,6 +507,33 @@ try {
             continue
         }
 
+        $lastRuntimeState = Get-DisplayRuntimeState
+        $lastAutomationPollAt = $now
+        if ($lastRuntimeState.Automation -eq "unknown" -or $null -eq $lastRuntimeState.Brightness) {
+            if (($now - $lastStatusLogAt).TotalMilliseconds -ge 5000) {
+                Write-Host "Display Dimmer state is unavailable. Idle dim is standing by."
+                $lastStatusLogAt = $now
+            }
+            continue
+        }
+        $resumeCandidate = $RestoreBrightness -lt 0 -and (-not $CooperateWithAutomation -or $IgnoreAutomation) -and
+            (Automation-OwnsDisplay -Automation $lastRuntimeState.Automation)
+        if ($resumeCandidate -and (-not $lastRuntimeState.ResumeSupported -or [string]::IsNullOrWhiteSpace($lastRuntimeState.ResumeTargetId))) {
+            if (($now - $lastStatusLogAt).TotalMilliseconds -ge 5000) {
+                Write-Host "Active automation cannot be resumed safely for this target or app version. Idle dim is standing by."
+                $lastStatusLogAt = $now
+            }
+            continue
+        }
+        if ($RestoreBrightness -ge 0 -and (Automation-OwnsDisplay -Automation $lastRuntimeState.Automation) -and
+            [string]::IsNullOrWhiteSpace($lastRuntimeState.ResumeTargetId)) {
+            if (($now - $lastStatusLogAt).TotalMilliseconds -ge 5000) {
+                Write-Host "A fixed manual restore over active automation requires one stable physical display. Idle dim is standing by."
+                $lastStatusLogAt = $now
+            }
+            continue
+        }
+
         if ($null -ne $lastRuntimeState.Brightness) {
             # Capture the live value as late as possible so restore matches what
             # the app actually had before the idle dim.
@@ -402,6 +545,8 @@ try {
 
         if ($result.ExitCode -eq 0) {
             $dimmedByBridge = $true
+            $capturedResumeTargetId = if ($resumeCandidate) { $lastRuntimeState.ResumeTargetId } else { "" }
+            $capturedRestoreTargetId = $lastRuntimeState.ResumeTargetId
             Clear-BufferedSerialInput
         }
         else {

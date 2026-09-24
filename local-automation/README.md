@@ -6,6 +6,8 @@ Display Dimmer Local Automation lets the running Display Dimmer app receive brig
 
 Display Dimmer 2.2.10 adds temperature control in API **1.1**, including approximate Kelvin input and cooperative blue light filter automation. The wire protocol remains `apiVersion: 1`; `--api-version` still prints `1`. Check the running app's `apiRevision` and `capabilities` in JSON before using temperature commands. Older apps do not advertise these capabilities.
 
+Display Dimmer **2.2.11** adds conditional brightness automation resume in API **1.2**. Basic idle dim/restore of displays without an active rule works with 2.2.10; dimming through an active rule and then resuming it requires a running 2.2.11 or later app advertising `resume-automation`.
+
 ## Requirements
 
 - Display Dimmer installed from the Microsoft Store.
@@ -52,6 +54,7 @@ DisplayDimmer.Cli.exe --watch --json
 | Adjust brightness up/down | `--adjust-brightness <-100..100> --target <target>` |
 | Save brightness as the Display Dimmer setting | `--set-brightness <0-100> --target <target> --save` |
 | Override schedules/app rules | `--set-brightness <0-100> --target <target> --source cli` |
+| Request brightness automation resume after your temporary override | `--resume-automation --target <target> --expected-brightness <0-100>`; use only when you recorded a previously unpaused rule |
 | Cooperate with schedules/app rules | `--set-brightness <0-100> --target <target> --source <name>` |
 | Keep a sensor handoff value fresh without moving the display | `--update-external-brightness <0-100> --target <target> --source <name>` |
 | Set warmer screen colors | `--set-temperature 4000 --temperature-unit kelvin --target <target>` |
@@ -84,15 +87,15 @@ If a display only has a `display_N` target, treat it as session-only and rerun `
 ## Documentation
 
 - [Local Automation Guide](docs/local-automation-api.md)
-- [CLI/API 1.1 Reference (wire protocol 1)](docs/cli-api-v1.md)
+- [CLI/API 1.2 Reference (wire protocol 1)](docs/cli-api-v1.md)
 - [Examples](examples/README.md)
 
 Start with the Local Automation Guide if you want setup steps and common commands. Use the examples when you want copyable patterns for PowerShell, Task Scheduler, AutoHotkey, Stream Deck, sensor bridges, or C# clients. Use the CLI/API reference when you need exact commands, JSON fields, exit codes, VCP behavior, or scripting details.
 
 Useful example entry points:
 
+- [Windows inactivity dimmer](examples/windows-inactivity-dimmer/)
 - [Automation recipes](examples/automation-recipes/)
-- [Cooperative temperature controller](examples/temperature-controller/)
 - [C# client](examples/csharp-client/)
 - [Task Scheduler](examples/task-scheduler/)
 - [AutoHotkey shortcuts](examples/autohotkey/)
@@ -148,6 +151,8 @@ DisplayDimmer.Cli.exe --update-external-brightness 45 --target primary --source 
 
 By default, `--set-brightness` acts like a manual override. Pass `--source cli` when you want that intent to be explicit in a saved script. This interrupts active schedules/app rules for the target so Display Dimmer does not immediately fight the script.
 
+If a script temporarily overrides an active rule, record that the rule was unpaused before the write. When the temporary level is no longer needed, API 1.2 `--resume-automation --target <stable-id> --expected-brightness <temporary-level>` can release that brightness interruption without restoring a stale number; check the running app's `resume-automation` capability first. The expected level detects a different later percentage, but cannot identify a newer user action at the same percentage. The named-source cooperative handoff below already existed in 2.2.10 and does not dim through an active rule.
+
 Use a named source such as `desk-light-sensor` for cooperative sensor integrations. Named-source `--set-brightness` applies immediately when no schedule or app rule owns the target. If Display Dimmer automation already owns that display, the command stands down and refreshes the external handoff value instead of interrupting the rule.
 
 Use `--update-external-brightness` when the script is already standing by and should only keep its desired handoff value fresh. Pass the same named `--source` you use for cooperative sensor commands. This command does not move the display and does not interrupt schedules or app rules.
@@ -177,7 +182,7 @@ Omitting `--source`, or using `--source cli`, is a manual **temperature-only** o
 
 External temperature intent stays eligible for handoff for five seconds. An already-applied tint does not disappear just because the controller stops, but a stale tint cannot return after a rule or manual action replaces it. Use `--resume-temperature --source <name>` to retire that source explicitly. Plain `--resume-temperature` releases manual temperature intervention; setting neutral does not release ownership.
 
-See the [temperature reference](docs/cli-api-v1.md#temperature-control-api-11) and [working controller example](examples/temperature-controller/) for source-safe release, state inspection, and error handling.
+See the [temperature reference](docs/cli-api-v1.md#temperature-control-api-11) for source-safe release, state inspection, and error handling.
 
 ## DDC/CI, Gamma, And VCP
 
@@ -201,7 +206,7 @@ VCP behavior is monitor-specific. Some displays ignore commands, report incomple
 
 App temperature uses Display Dimmer's existing software/gamma color pipeline. It does not change monitor VCP color presets or RGB gains, hardware brightness, or the saved DDC/CI preference.
 
-See [CLI/API 1.1 Reference](docs/cli-api-v1.md) for supported VCP names, force requirements, safety limits, and JSON result fields.
+See [CLI/API 1.2 Reference](docs/cli-api-v1.md) for supported VCP names, force requirements, safety limits, and JSON result fields.
 
 ## Exit Codes
 

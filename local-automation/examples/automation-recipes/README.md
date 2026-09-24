@@ -4,7 +4,7 @@ These recipes show common ways to control Display Dimmer from scripts and local 
 
 Use these examples when you want a practical command pattern, not a full sample project.
 
-The recipes below remain brightness-focused. For API 1.1 native/Kelvin color-temperature commands, see the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) and separate [temperature controller example](../temperature-controller/). Temperature has independent ownership; do not reuse brightness standby flags to decide temperature control.
+The recipes below remain brightness-focused. For API 1.1 native/Kelvin color-temperature commands, see the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11). Temperature has independent ownership; do not reuse brightness standby flags to decide temperature control.
 
 ## Requirements
 
@@ -40,11 +40,17 @@ Omitting `--source` has the same manual-override behavior. Passing `--source cli
 
 Manual override can interrupt active schedules for the targeted displays and suspend active app rules for the targeted displays.
 
+For a temporary manual dim that should return control to a previously active rule, use the guarded [toggle recipe](#toggle-dim-and-restore-one-display) or [Windows inactivity watcher](../windows-inactivity-dimmer/). API 1.2 `--resume-automation` releases a brightness interruption; it is separate from the older named-source cooperative handoff. Do not call it after a one-way manual action or to clear a pre-existing pause.
+
 ## Toggle Dim And Restore One Display
 
 Use this pattern for a macro button that dims one fixed display the first time you press it, then restores that display's previous live brightness the next time you press it.
 
-This recipe uses one state file per target. It only deletes the saved state after the restore command succeeds, so a failed restore does not lose the previous brightness.
+This recipe uses one state file per physical `dd_...` target. If the first press temporarily interrupts an active, unpaused schedule or app rule, the second press conditionally resumes it instead of writing the old level over the rule. It keeps the state file after a failed command so you can retry.
+
+The running app must advertise `resume-automation` for an active-rule dim. On older builds the first press leaves that rule alone. An existing state file from the earlier version of this recipe lacks `dimBrightness`; inspect brightness and remove that file manually before using the updated toggle.
+
+The expected-percentage check protects later changes to a different brightness. A later user action at exactly the same dim percentage cannot be distinguished without an ownership token.
 
 ```powershell
 $target = "dd_your_stable_id"
@@ -59,10 +65,70 @@ New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
 
 if (Test-Path -LiteralPath $stateFile) {
     $saved = Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
+    if ($saved.target -ne $target -or $null -eq $saved.dimBrightness -or $null -eq $saved.brightness) {
+        throw "Saved toggle state has an older or mismatched format. Remove it manually after checking brightness."
+    }
     $restoreBrightness = [int]$saved.brightness
 
+    $live = DisplayDimmer.Cli.exe --get-state --target $target --json | ConvertFrom-Json
+    $display = @($live.displays)[0]
+    if ($LASTEXITCODE -ne 0 -or -not $live.success -or @($live.displays).Count -ne 1 -or
+        $null -eq $display -or $display.targetId -ne $target -or $null -eq $display.brightness) {
+        throw "The same physical display and its live brightness could not be verified. Saved toggle state was kept."
+    }
+
+    if ([int]$display.brightness -ne [int]$saved.dimBrightness -or
+        (($display.scheduleActive -and -not $display.scheduleInterrupted) -or
+         ($display.perAppActive -and -not $display.perAppInterrupted))) {
+        # A later user action or rule already took over. Do not overwrite it.
+        Remove-Item -LiteralPath $stateFile -Force
+        exit 0
+    }
+
+    if ($saved.resumeAutomation) {
+        $resume = DisplayDimmer.Cli.exe --resume-automation --target $target --expected-brightness ([int]$saved.dimBrightness) --json | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0 -or -not $resume.success) {
+            $resume | ConvertTo-Json -Depth 8
+            exit 1
+        }
+
+        $after = DisplayDimmer.Cli.exe --get-state --target $target --json | ConvertFrom-Json
+        $afterDisplay = @($after.displays)[0]
+        if ($LASTEXITCODE -ne 0 -or -not $after.success -or @($after.displays).Count -ne 1 -or
+            $null -eq $afterDisplay -or $afterDisplay.targetId -ne $target -or $null -eq $afterDisplay.brightness) {
+            throw "Automation release was requested, but the resulting state could not be checked. Saved toggle state was kept."
+        }
+
+        if (($afterDisplay.scheduleActive -and -not $afterDisplay.scheduleInterrupted) -or
+            ($afterDisplay.perAppActive -and -not $afterDisplay.perAppInterrupted) -or
+            [int]$afterDisplay.brightness -ne [int]$saved.dimBrightness) {
+            Remove-Item -LiteralPath $stateFile -Force
+            exit 0
+        }
+        if ($afterDisplay.scheduleActive -or $afterDisplay.perAppActive) {
+            throw "The rule has not reasserted yet. Saved toggle state was kept; retry after it settles."
+        }
+        # The rule ended while dimmed. Restore the captured level below.
+    }
+
+    $beforeRestore = DisplayDimmer.Cli.exe --get-state --target $target --json | ConvertFrom-Json
+    $beforeDisplay = @($beforeRestore.displays)[0]
+    if ($LASTEXITCODE -ne 0 -or -not $beforeRestore.success -or @($beforeRestore.displays).Count -ne 1 -or
+        $null -eq $beforeDisplay -or $beforeDisplay.targetId -ne $target -or $null -eq $beforeDisplay.brightness) {
+        throw "Live state changed before restore. Saved toggle state was kept."
+    }
+    if ([int]$beforeDisplay.brightness -ne [int]$saved.dimBrightness -or
+        (($beforeDisplay.scheduleActive -and -not $beforeDisplay.scheduleInterrupted) -or
+         ($beforeDisplay.perAppActive -and -not $beforeDisplay.perAppInterrupted))) {
+        Remove-Item -LiteralPath $stateFile -Force
+        exit 0
+    }
+    if ($beforeDisplay.scheduleActive -or $beforeDisplay.perAppActive) {
+        throw "Automation is still active. Saved toggle state was kept; no manual restore was sent."
+    }
+
     $restoreResult = DisplayDimmer.Cli.exe --set-brightness $restoreBrightness --target $target --source $source --json | ConvertFrom-Json
-    if ($restoreResult.success) {
+    if ($LASTEXITCODE -eq 0 -and $restoreResult.success) {
         Remove-Item -LiteralPath $stateFile -Force
         exit 0
     }
@@ -73,21 +139,32 @@ if (Test-Path -LiteralPath $stateFile) {
 
 $state = DisplayDimmer.Cli.exe --get-state --target $target --json | ConvertFrom-Json
 $displays = @($state.displays)
-if (-not $state.success -or $displays.Count -lt 1 -or $null -eq $displays[0].brightness) {
+if ($LASTEXITCODE -ne 0 -or -not $state.success -or $displays.Count -ne 1 -or
+    $displays[0].targetId -ne $target -or $null -eq $displays[0].brightness) {
     $state | ConvertTo-Json -Depth 8
     exit 1
 }
 
 $currentBrightness = [int]$displays[0].brightness
+$resumeAutomation = ($displays[0].scheduleActive -and -not $displays[0].scheduleInterrupted) -or
+    ($displays[0].perAppActive -and -not $displays[0].perAppInterrupted)
+if ($resumeAutomation -and ($displays[0].scheduleInterrupted -or $displays[0].perAppInterrupted)) {
+    throw "Another brightness rule is already interrupted. The toggle will not clear that pre-existing pause."
+}
+if ($resumeAutomation -and -not (@($state.capabilities) -contains "resume-automation")) {
+    throw "The running Display Dimmer version cannot resume this active rule after dimming. No command was sent."
+}
 
 @{
     target = $target
     brightness = $currentBrightness
+    dimBrightness = $dimBrightness
+    resumeAutomation = [bool]$resumeAutomation
     savedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
 } | ConvertTo-Json | Set-Content -LiteralPath $stateFile -Encoding UTF8
 
 $dimResult = DisplayDimmer.Cli.exe --set-brightness $dimBrightness --target $target --source $source --json | ConvertFrom-Json
-if ($dimResult.success) {
+if ($LASTEXITCODE -eq 0 -and $dimResult.success) {
     exit 0
 }
 
@@ -164,6 +241,7 @@ A few details matter:
 - This recipe requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. Otherwise the asynchronous safety reset can restore hardware brightness to 100 after the script writes its low raw value.
 - Capture Display Dimmer brightness, DDC/CI mode, and raw hardware brightness before dimming. The DDC-off safety handoff can save a 100% baseline, so the restore uses `--save` to put the captured brightness back.
 - Use `--source cli` when extra-dark dimming should behave like a manual override. For no-motion dimming, this prevents schedules and app rules from immediately reasserting over an empty-room dim.
+- This advanced sequence also changes DDC mode, raw VCP brightness, and saved brightness. Keep schedules and app rules inactive throughout capture, dim, and restore: its `--save` can promote an automation level into the manual baseline if a rule starts after the initial check. Recheck state before either `--save`; stop and restore manually if a rule became active. The sample does not attempt automation resume or treat the simple guarded toggle release as a substitute for hardware restoration.
 - Test the sequence interactively on one display and keep the restore commands ready. Extremely low hardware and gamma values can make the screen difficult to recover.
 
 Capture state and choose cautious starting levels:
@@ -190,6 +268,10 @@ $stateResponse = Invoke-DisplayDimmerJson -Arguments @(
 $displayState = @($stateResponse.displays)[0]
 if ($null -eq $displayState) {
     throw "The target did not return a physical display state."
+}
+if ($displayState.scheduleActive -or $displayState.perAppActive -or
+    $displayState.scheduleInterrupted -or $displayState.perAppInterrupted) {
+    throw "This DDC/gamma restore recipe requires no active or interrupted schedule/app rule on the target."
 }
 
 $vcpResponse = Invoke-DisplayDimmerJson -Arguments @(
