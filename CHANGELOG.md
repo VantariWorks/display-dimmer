@@ -14,7 +14,6 @@ This update adds saved Pro presets, compact automation controls, and smoother ev
 - Choose which brightness, contrast, and temperature levels a custom schedule or app rule changes, leaving the other levels unchanged.
 - Scroll over the tray icon to adjust brightness in 5% steps for the selection in the main window.
 - Optionally show the hidden main window after selected brightness changes, without taking focus, for a duration you choose.
-- IT can activate direct-purchase Pro licenses from the command line in the intended Windows user profile, without opening the app.
 
 ### Improved
 
