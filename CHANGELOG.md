@@ -26,7 +26,6 @@ This update adds saved Pro presets, compact automation controls, and smoother ev
 ### Fixed
 
 - Fixed stale hardware brightness writes after switching to software dimming.
-- Fixed Pro restoration for valid direct-purchase keys affected by removed purchase variants, while preserving existing licenses.
 - Fixed a responsiveness issue when turning off Local automation from Settings.
 
 ## v2.2.11 (September 24, 2026)
