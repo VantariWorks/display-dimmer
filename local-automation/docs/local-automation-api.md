@@ -198,6 +198,8 @@ Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change th
 
 Disabling DDC/CI no longer carries a low hardware brightness percentage into gamma. If a script intentionally needs to dim below normal brightness `0`, it must establish neutral gamma, perform an explicit verified raw VCP `0x10` hardware-brightness write, and then apply software/gamma dimming. This advanced pattern requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious values, validation, and restore behavior.
 
+Display Dimmer 2.2.12 cancels stale queued brightness writes after DDC is disabled and orders native writes to the same display. A raw command waits for an already-started hardware write; if the driver does not return, it can fail or time out. Stop on any failed response. The recipe is not an atomic transaction.
+
 Use VCP commands only when you intentionally want to read or write a raw monitor DDC/CI hardware value:
 
 ```powershell

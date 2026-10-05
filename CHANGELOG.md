@@ -18,12 +18,14 @@ This update adds saved Pro presets, compact automation controls, and smoother ev
 
 ### Improved
 
+- Improved brightness recovery when unlocking Windows after sleep.
 - Browse Schedules, App Rules, and Hotkeys as compact cards that expand for editing, with smoother scrolling and reordering as your lists grow.
 - See clearer active and paused schedule and app-rule status, and resume paused automation directly from Displays.
 - Display, schedule, app-rule, and hotkey enable switches now apply immediately.
 
 ### Fixed
 
+- Fixed stale hardware brightness writes after switching to software dimming.
 - Fixed Pro restoration for valid direct-purchase keys affected by removed purchase variants, while preserving existing licenses.
 - Fixed a responsiveness issue when turning off Local automation from Settings.
 

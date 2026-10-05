@@ -581,6 +581,8 @@ Most scripts should use normal `--set-brightness`. Disabling DDC/CI no longer tr
 
 This deliberately combines raw monitor hardware brightness with Display Dimmer gamma dimming. VCP `0x10` values are monitor-specific and are not necessarily percentages. The pattern requires Display Dimmer > Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off, and the script must capture enough state to restore both layers. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious copy-paste commands, validation, and restore behavior.
 
+Display Dimmer 2.2.12 cancels stale queued brightness writes after DDC is disabled and orders native writes to the same display. A raw command waits for an already-started hardware write; if the driver does not return, it can fail or time out. Stop on any failed response. The recipe is not an atomic transaction.
+
 Normal `--set-contrast` stays on Display Dimmer's software/gamma contrast path. It does not change the monitor's hardware OSD contrast setting.
 
 Use VCP only when you intentionally want to read or write the monitor's raw DDC/CI hardware value:

@@ -348,6 +348,8 @@ Invoke-DisplayDimmerJson -Arguments @(
 
 Why this order: the first command leaves gamma neutral and clears app-owned DDC brightness work. Raw VCP `0x10` then lowers only the monitor hardware layer and verifies the monitor's readback. The final command is the explicit opt-in to stack software/gamma dimming over that low hardware value.
 
+Display Dimmer 2.2.12 also cancels stale queued brightness writes when DDC is disabled and orders native writes to the same display. A raw command waits for an already-started hardware write to finish. If the driver does not return, the later command can fail or time out; stop on a failed response instead of continuing the recipe. This sequence is not an atomic transaction.
+
 Restore depends on the display's original DDC/CI state.
 
 Always neutralize gamma first so the screen becomes easier to see before restoring hardware:
