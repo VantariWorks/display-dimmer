@@ -4,9 +4,15 @@ You can control Display Dimmer from local scripts and helper apps with the Displ
 
 Local automation is a Display Dimmer Pro feature.
 
-Display Dimmer 2.2.10 adds temperature and blue light filter control through API **1.1**. The compatible wire protocol stays at `apiVersion: 1`, and `--api-version` still prints `1`. Use the running app's JSON `apiRevision` and `capabilities` to detect temperature support; missing metadata from an older app is not support.
+For unattended Lemon Squeezy Pro activation in 2.2.12+, see [IT license deployment](it-license-deployment.md). That standalone CLI operation does not require the running app, Pro, or Local automation, and is not a named-pipe API command. The display-control requirements below still apply.
 
-Display Dimmer **2.2.11** adds conditional brightness automation resume in API **1.2**. Basic idle dim/restore of displays without an active rule works with 2.2.10; dimming through an active rule and then resuming it requires a running 2.2.11 or later app advertising `resume-automation`.
+Display Dimmer 2.2.10 introduced temperature and blue light filter control through API **1.1**. The compatible wire protocol stays at `apiVersion: 1`, and `--api-version` still prints `1`. Use the running app's JSON `apiRevision` and `capabilities` to detect temperature support; missing metadata from an older app is not support.
+
+Display Dimmer 2.2.12 introduced Pro saved-preset listing (`list-presets`) and recall (`presets`) in API revision **1.2**. Create a preset in Settings > Presets, then call `DisplayDimmer.Cli.exe --apply-preset "Evening"`. Newer presets carry their saved display targets and reject `--target`. Only an older preset without saved displays needs one explicit `--target` (`all`, a linked group, or one display). Recall uses the app's normal manual preset behavior.
+
+Display Dimmer 2.2.11 introduced conditional brightness automation resume in API **1.2**; 2.2.12 retains it. Check for the running app's `resume-automation` capability before using it.
+
+Display Dimmer 2.2.12 retains wire API **1** and revision **1.2**. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`.
 
 This works well for:
 
@@ -66,6 +72,7 @@ DisplayDimmer.Cli.exe --set-brightness 70 --target dd_your_stable_id --json
 | Set brightness right now | `--set-brightness <0-100> --target <target>` | Live-only unless `--save` is added. |
 | Adjust brightness up/down | `--adjust-brightness <-100..100> --target <target>` | Live-only unless `--save` is added. |
 | Save brightness as the Display Dimmer setting | `--set-brightness <0-100> --target <target> --save` | Changes saved app settings. |
+| Recall a saved Pro preset | `--apply-preset <name-or-id>` | Newer presets use saved displays; older presets require one `--target <target>`. Omitted controls stay unchanged. |
 | Override schedules/app rules | `--set-brightness <0-100> --target <target> --source cli` | Same behavior when `--source` is omitted. |
 | Request brightness automation resume | `--resume-automation --target <target> --expected-brightness <0-100>` | If tracked brightness matches, clears the brightness interruption and requests rule reevaluation. Use only after recording that your temporary override interrupted an unpaused rule. API 1.2. |
 | Cooperate with schedules/app rules | `--set-brightness <0-100> --target <target> --source <name>` | Applies when no rule owns brightness; otherwise stands down and refreshes handoff intent. |
@@ -110,6 +117,10 @@ DisplayDimmer.Cli.exe --get-state --target all --pretty
 ```
 
 Brightness changes are live-only by default. Add `--save` only for scripts that should change saved Display Dimmer settings. `--save` is a settings write, not a cooperative sensor handoff. For a temporary manual dim, record that an active rule was unpaused before the write; only then use `--resume-automation --target <id> --expected-brightness <temporary-level>` to let the rule reassert. The command checks the tracked level, not who made the latest write. It writes no brightness and does not release temperature control. Check the running app's `resume-automation` capability first.
+
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
+
+For each display, one selected app rule supplies its included brightness, contrast, and temperature levels. A schedule can supply levels that app rule leaves unchanged; another matching app rule cannot fill those omitted levels. App rules take priority over schedules for levels they include. Preset-linked rules use the preset's saved display targets and levels, not unapplied Presets edits.
 
 ## Temperature And Blue Light Filtering
 
@@ -183,7 +194,7 @@ DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode gamma --target dd_yo
 DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode ddc --target dd_your_stable_id
 ```
 
-Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change the saved DDC/CI preference. When the preference changes from enabled to disabled, Display Dimmer uses the same safety handoff as Settings: it sets and saves gamma brightness at 100%, preserves gamma contrast, and cancels pending low DDC brightness so the two dimming layers are not stacked accidentally. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. Enabling DDC/CI reasserts the current Display Dimmer level through the DDC-capable path when display control is enabled. `--set-ddc` saves the preference automatically, without `--save`.
+Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change the saved DDC/CI preference. When the preference changes from enabled to disabled, Display Dimmer uses the same safety handoff as Settings: it sets and saves gamma brightness at 100%, preserves gamma contrast, and cancels pending low DDC brightness so the two dimming layers are not stacked accidentally. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. Enabling DDC/CI starts a background brightness read so Display Dimmer can adopt the monitor's current hardware level instead of immediately writing the software-dimming level to it. The command reply can arrive before this handoff completes, and newer brightness requests take precedence. `--set-ddc` saves the preference automatically, without `--save`.
 
 Disabling DDC/CI no longer carries a low hardware brightness percentage into gamma. If a script intentionally needs to dim below normal brightness `0`, it must establish neutral gamma, perform an explicit verified raw VCP `0x10` hardware-brightness write, and then apply software/gamma dimming. This advanced pattern requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious values, validation, and restore behavior.
 
@@ -222,7 +233,7 @@ Use the `targetId` value from `--list-displays`. When Display Dimmer has a stron
 
 For a uniquely identified physical display, Display Dimmer preserves its `dd_...` target ID across ordinary monitor power cycles and reconnects, including cases where Windows changes `DISPLAYn` or the volatile driver-instance part of the display path. If a reconnect match is ambiguous, Display Dimmer fails closed instead of guessing; rerun `--list-displays` to obtain the current target.
 
-Linked display groups also appear as `dd_...` target IDs when you list displays. Targeting a linked group expands the command to the group's currently connected member displays. Each member still returns its own success or error result.
+Linked display groups also appear as `dd_...` target IDs when you list displays. Targeting a linked group expands the command to the group's currently connected members with display control enabled. Each selected member returns its own success or error result; disconnected members and members with display control disabled are omitted.
 
 If `targetId` is `display_1`, `display_2`, or another display number, treat it as session-only. It can change after hotplug, docking, driver updates, or display layout changes, so rerun `--list-displays` before relying on it.
 
@@ -244,11 +255,11 @@ By default, `--set-brightness` acts like a manual override. Pass `--source cli` 
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source cli
 ```
 
-Use `--set-brightness ... --source <name>` when the script is a cooperative external controller such as a light sensor. The source name is just a stable caller label; it does not save settings or grant special access. If no schedule or app rule owns the target, the command can apply immediately. If Display Dimmer automation already owns the target, the command stands down and refreshes the external handoff value instead of interrupting the rule.
+Use `--set-brightness ... --source <name>` without `--save` for cooperative external controllers such as light sensors. The source name is a stable caller label, not extra access. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
 
 For presence or no-motion dimming, prefer manual override mode unless you explicitly want schedules and app rules to win. An empty-room dimmer is usually a user-intent override, not a cooperative brightness handoff.
 
-On occupancy return, a temporary manual dimmer can ask Display Dimmer to release the brightness interruption with API 1.2 `--resume-automation`, provided it recorded an unpaused rule before dimming and the target still has the expected idle level. The level check cannot distinguish a newer user action at that same percentage. A numeric restore is another manual write and does not resume the rule. If the interrupted rule session has already ended, Display Dimmer clears its interruption automatically; a later distinct session can take control. Check the running app's capability; named-source cooperative handoff is the pre-existing alternative only when an active rule is allowed to keep control during the idle period.
+On occupancy return, a temporary manual dimmer can ask Display Dimmer to release the brightness interruption with API 1.2 `--resume-automation`, provided it recorded an unpaused rule before dimming and the target still has the expected idle level. The level check cannot distinguish a newer user action at that same percentage. A numeric restore is another manual write and does not resume the rule. Check the running app's capability; named-source cooperative handoff is the pre-existing alternative only when an active rule is allowed to keep control during the idle period.
 
 ```powershell
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source desk-light-sensor
@@ -290,14 +301,14 @@ DisplayDimmer.Cli.exe --watch --json | ForEach-Object {
 }
 ```
 
-For **brightness** cooperative sensor-style integrations, stand by when a display has an uninterrupted app rule or schedule:
+For **brightness** cooperative sensor-style integrations, these activity flags are a conservative standby filter; contrast/temperature-only rules can also set them. A named brightness request without `--save` lets the app decide actual brightness ownership:
 
 ```powershell
 $perAppOwns = $display.perAppActive -and -not $display.perAppInterrupted
 $scheduleOwns = $display.scheduleActive -and -not $display.scheduleInterrupted
 ```
 
-Make that decision per display when controlling more than one monitor. If display 2 is owned by a fullscreen app rule or schedule, send `--update-external-brightness` for display 2 and continue using `--set-brightness ... --source <name>` for displays that are not owned by Display Dimmer automation. Use `--source cli` when the script is intentionally supposed to override Display Dimmer automation, such as a manual shortcut or no-motion dimmer.
+Make that decision per display when controlling more than one monitor. If display 2's brightness is owned by an app rule or schedule, send `--update-external-brightness` for display 2 and continue using `--set-brightness ... --source <name>` without `--save` for other displays. Use `--source cli` when the script is intentionally supposed to override Display Dimmer automation, such as a manual shortcut or no-motion dimmer.
 
 For temperature, use `temperatureOwner` (`manual`, `perApp`, `schedule`, `external`, `session`, or `saved`) and `temperatureAvailable` independently. Temperature fields are nullable/absent on older apps. Watch reports meaningful value, owner, availability, and freshness changes, not controller heartbeat timestamps.
 

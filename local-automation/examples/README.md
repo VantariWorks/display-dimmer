@@ -4,6 +4,13 @@ These examples show how to use `DisplayDimmer.Cli.exe` to control Display Dimmer
 
 The examples assume Display Dimmer is installed from the Microsoft Store and already running in the same Windows user session as the script or tool.
 
+Open PowerShell in the downloaded repository's `local-automation` folder before
+running examples with relative paths such as `.\examples\...`.
+
+For the standalone license command that works before Pro or app startup, use
+[IT license deployment](../docs/it-license-deployment.md). The display-control
+requirements below still apply to these examples.
+
 ## Requirements
 
 - Display Dimmer installed from the Microsoft Store.
@@ -71,6 +78,27 @@ If a display only has a `display_N` target, rerun `--list-displays` after dockin
 - [Arduino motion sensor + Nokia LCD](arduino-motion-sensor-lcd/)
   Shows the same motion workflow with a Nokia 5110 / PCD8544 LCD status display.
 
+## Saved Preset Examples (2.2.12)
+
+Save a Pro preset in Settings > Presets first. Check the running app's
+`list-presets` and `presets` capabilities, then list and recall saved presets:
+
+```powershell
+DisplayDimmer.Cli.exe --list-presets --json
+DisplayDimmer.Cli.exe --apply-preset "Evening" --json
+```
+
+Use a stable preset ID from the list when a script must survive renaming.
+New presets contain their saved displays; do not add `--target`. Only older
+presets with `requiresTarget: true` need one explicit target expression.
+See [preset recall](../docs/cli-api-v1.md#saved-preset-recall-api-12), the
+[preset recipe](automation-recipes/README.md#recall-a-saved-preset),
+[Stream Deck button](stream-deck/README.md#recall-a-saved-preset),
+[AutoHotkey shortcut](autohotkey/README.md#recall-a-saved-preset), or
+[manual Task Scheduler action](task-scheduler/README.md#run-a-saved-preset).
+The existing sensor bridges and brightness task-registration helper remain
+brightness-focused; they do not gain preset parameters automatically.
+
 ## Script Guidance
 
 Use JSON output when another tool needs to inspect success, errors, or partial success:
@@ -83,11 +111,13 @@ Use `--source cli` for scripts that should act like manual overrides and interru
 
 API 1.2 `--resume-automation` is for a temporary brightness override whose script recorded an active, unpaused rule before dimming and can verify the same physical display still has its own dim level. The inactivity watcher, motion bridges, and toggle recipe use it. One-way buttons and scheduled actions deliberately remain manual; named-source sensor handoff already works without it. The running app must advertise `resume-automation` in `--get-state` capabilities. Its expected-level check cannot distinguish a newer user action that chose the same percentage.
 
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
+
 Temperature manual control interrupts temperature only, leaving automated brightness running. Use native signed values or `--temperature-unit kelvin`; Kelvin is approximate. Ordinary temperature changes are session-only; manual `--save` queues temperature persistence without promoting unrelated live brightness/contrast. Named cooperative temperature sources cannot save. Do not reuse brightness standby flags for temperature: brightness-only rules do not own temperature.
 
 If a script, hotkey, macro, or sensor needs to dim lower than normal brightness `0`, use the [extra-dark dimming recipe](automation-recipes/README.md#extra-dark-dimming). It safely establishes neutral gamma before an explicit, verified raw VCP `0x10` hardware-brightness write and the final gamma dim.
 
-Use a named source for cooperative sensor bridges that should stand down while Display Dimmer automation owns the display:
+Use a named source without `--save` for cooperative sensor bridges that should stand down while Display Dimmer automation owns brightness. The app checks brightness ownership; contrast/temperature-only rules can keep running. Examples that filter on `perAppActive` or `scheduleActive` use a conservative policy and can also stand by for those rules. A named brightness request with `--save` is a manual saved override:
 
 ```powershell
 DisplayDimmer.Cli.exe --set-brightness 45 --target primary --source cli

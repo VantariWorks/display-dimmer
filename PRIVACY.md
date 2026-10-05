@@ -1,18 +1,18 @@
 # Privacy Policy
 
-Last updated: May 19, 2026
+Last updated: October 5, 2026
 
 This policy explains how Display Dimmer and the Display Dimmer website handle
 data. Display Dimmer is built as a local-first Windows app for controlling
-external monitor brightness and contrast.
+display brightness, contrast, and color temperature.
 
 ## Summary
 
 - Display Dimmer does not require an app account.
 - Display Dimmer does not include in-app advertising SDKs or third-party ad
   trackers.
-- Brightness settings, display preferences, schedules, app rules, hotkeys, and
-  themes are stored locally on your device.
+- Brightness settings, display preferences, saved presets, schedules, app rules,
+  hotkeys, and themes are stored locally on your device.
 - Display Dimmer sends a small amount of anonymous usage and reliability
   telemetry to help improve the app.
 - Detailed diagnostics reports are sent only after you choose to send a
@@ -21,18 +21,27 @@ external monitor brightness and contrast.
 ## Website
 
 The Display Dimmer website is operated by Vantari Works and hosted on
-Cloudflare Pages. The website does not set cookies or run analytics or
-advertising trackers.
+Cloudflare Pages. It uses Google Analytics for basic traffic information,
+including pages, referrals, approximate region, and browser/device type.
+Analytics may use first-party cookies to distinguish visits or sessions; the
+site does not use personalized advertising.
 
-The contact page opens an email draft on your device. No form data is submitted
-from the website itself. If you contact Display Dimmer support by email, your
-message and email address are used to respond and provide support.
+The activation and nonprofit application pages exclude Google Analytics.
+License keys and nonprofit application contents are not sent to analytics.
+The Mac beta and nonprofit forms collect the contact and request details you
+submit using Cloudflare services, with Cloudflare Turnstile for abuse checks.
+For the current fields, website events, and related choices, see the
+[website privacy policy](https://displaydimmer.com/privacy).
+
+If you contact Display Dimmer support by email, your message and email address
+are used to respond and provide support.
 
 ## Local App Data
 
 Display Dimmer stores its settings locally on your device. This can include:
 
-- brightness and contrast levels
+- brightness, contrast, and temperature levels
+- saved presets, including their names, included levels, and display targets
 - display labels
 - enabled or disabled display state
 - DDC/CI hardware-control preference
@@ -130,11 +139,41 @@ Works with aggregated statistics such as install counts, device and OS versions,
 regions, and app usage summaries. This data does not include the content of
 support emails, diagnostics reports, or payment card details.
 
-Purchases, payment information, Store ratings, and Store reviews are handled by
-Microsoft. Display Dimmer may use Microsoft Store APIs to check Pro entitlement,
+Microsoft Store purchases, payment information, Store ratings, and Store reviews
+are handled by Microsoft. Display Dimmer may use Microsoft Store APIs to check Pro entitlement,
 start purchase or restore flows, request regional Pro price text, or open the
 Store rating experience. Vantari Works does not receive your full payment card
 details.
+
+## Direct Pro Purchases And License Activation
+
+Direct-purchase checkout is provided by Lemon Squeezy. An app-opened checkout
+link can include a fixed purchase-source label, app version, a coarse two-letter
+Windows region code, and a monitor-count bucket. These fields describe the
+purchase context; they do not include monitor identities or app-rule paths.
+See [Lemon Squeezy's privacy policy](https://www.lemonsqueezy.com/privacy) for its
+handling of checkout and purchase information.
+
+When you activate a direct-purchase key, Display Dimmer sends the key and a
+generic app instance label to Lemon Squeezy's License API over HTTPS. It does
+not send the Windows machine name as that label. If a new activation cannot be
+accepted or saved locally, the app may send the key and returned activation
+instance ID once to release that activation.
+
+The local direct-license cache contains the key, activation instance ID,
+store/product/variant metadata, license status, and a validation timestamp.
+It is encrypted with Windows current-user DPAPI in the invoking user's profile.
+The app does not put the key in telemetry, diagnostics reports, or logs.
+An existing valid local cache permits offline Pro use without background license
+polling. The standalone IT activation command uses the same current-user cache;
+it does not enable a resident CLI or Local automation server.
+
+Website-assisted activation links can contain the key in an HTTPS URL and a
+`displaydimmer:` protocol URI, where browser history and Windows protocol
+handling may expose it. Treat those links as secrets. For IT deployment, the
+[redirected-stdin command](local-automation/docs/it-license-deployment.md) keeps
+the key out of process arguments; passing a key directly in arguments can expose
+it through command history, process listings, or deployment logs.
 
 ## Sharing And Retention
 

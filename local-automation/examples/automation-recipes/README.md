@@ -28,6 +28,34 @@ Use:
 - `dd_...` for physical displays and linked display groups in durable automation.
 - `display_1`, `display_2`, etc. only for quick tests.
 
+## Recall A Saved Preset
+
+In Display Dimmer 2.2.12, save a Pro preset in Settings > Presets and check the
+running app's `list-presets` and `presets` capabilities. List its name and stable
+ID, recall the saved levels, and inspect the resulting tracked state:
+
+```powershell
+DisplayDimmer.Cli.exe --list-presets --json
+DisplayDimmer.Cli.exe --apply-preset "Evening" --json
+DisplayDimmer.Cli.exe --get-state --target all --json
+```
+
+For a durable integration, replace `Evening` with the preset's ID; renaming
+preserves that ID. New presets carry saved physical display targets and reject
+`--target`. Only an older preset marked `requiresTarget: true` needs exactly
+one target expression, such as:
+
+```powershell
+DisplayDimmer.Cli.exe --apply-preset "Older preset" --target primary --json
+```
+
+Recall applies the saved displays and included levels, leaves omitted levels
+unchanged, and uses the app's normal manual preset behavior. It does not modify
+the preset or include unsaved Settings edits. Do not add `--save`, `--source`,
+`--brightness-mode`, or separate brightness/contrast/temperature flags.
+Success means the app accepted the request; it is not hardware verification.
+See the [preset reference](../../docs/cli-api-v1.md#saved-preset-recall-api-12).
+
 ## Manual Override
 
 Use this when the script should behave like a user action and take control immediately.
@@ -40,7 +68,7 @@ Omitting `--source` has the same manual-override behavior. Passing `--source cli
 
 Manual override can interrupt active schedules for the targeted displays and suspend active app rules for the targeted displays.
 
-For a temporary manual dim that should return control to a previously active rule, use the guarded [toggle recipe](#toggle-dim-and-restore-one-display) or [Windows inactivity watcher](../windows-inactivity-dimmer/). API 1.2 `--resume-automation` releases a brightness interruption; it is separate from the older named-source cooperative handoff. Do not call it after a one-way manual action or to clear a pre-existing pause.
+For a temporary manual dim that should return control to a previously active rule, use the guarded [toggle recipe](#toggle-dim-and-restore-one-display) or [Windows inactivity watcher](../windows-inactivity-dimmer/). API 1.2 `--resume-automation` releases brightness interruption and manual contrast holds on the targeted schedule/app rules; its expected-level check compares brightness only. Temperature uses `--resume-temperature`. Resume is separate from the older named-source cooperative handoff. Do not call it after a one-way manual action or to clear a pre-existing pause.
 
 ## Toggle Dim And Restore One Display
 

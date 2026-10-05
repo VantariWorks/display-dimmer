@@ -6,6 +6,10 @@ The sample shows how a C# app can call `DisplayDimmer.Cli.exe`, read JSON output
 
 This C# sample remains brightness-only. For an API 1.1 temperature integration, use the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11) for running-server capability detection, native/Kelvin values, and temperature-specific ownership/release.
 
+For a 2.2.12 preset integration, check the running app's `list-presets` and
+`presets` capabilities and use the [saved preset reference](../../docs/cli-api-v1.md#saved-preset-recall-api-12).
+The sample below remains brightness-only; it does not create or edit presets.
+
 ## What It Does
 
 1. Runs `DisplayDimmer.Cli.exe --list-displays --json`.
@@ -25,6 +29,8 @@ For a real integration, show the display list during setup and store the selecte
 - Run the C# app as the same Windows user as Display Dimmer.
 
 ## Run
+
+Open PowerShell in the downloaded repository's `local-automation` folder.
 
 Run the sample with the installed command-line tool:
 

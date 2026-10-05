@@ -176,6 +176,28 @@ Arguments:
 
 Use this only when you intentionally want Display Dimmer to enable DDC/CI for that display first.
 
+### Recall A Saved Preset
+
+In 2.2.12, save a Pro preset in Settings > Presets and check the running app's
+`list-presets` and `presets` capabilities. Use `--list-presets --json` to obtain
+its stable ID. Program:
+
+```text
+DisplayDimmer.Cli.exe
+```
+
+Arguments:
+
+```text
+--apply-preset "Evening" --json
+```
+
+Replace `Evening` with the saved name or stable ID. New presets already carry
+their display targets; do not append `--target` or `--source cli`.
+Only an older preset with `requiresTarget: true` needs one target expression.
+This is a manual preset recall; omitted levels remain unchanged. See the
+[preset reference](../../docs/cli-api-v1.md#saved-preset-recall-api-12).
+
 ## Debugging A Button
 
 Macro tools often hide command output. If a button appears to do nothing, run the same command in PowerShell first.

@@ -4,6 +4,29 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.12 (October 5, 2026)
+
+This update adds saved Pro presets, compact automation controls, and smoother everyday brightness control.
+
+### New
+
+- Save your favorite brightness, contrast, and temperature combinations as Pro presets, and apply them from the main window, tray menu, hotkeys, schedules, app rules, or command line.
+- Choose which brightness, contrast, and temperature levels a custom schedule or app rule changes, leaving the other levels unchanged.
+- Scroll over the tray icon to adjust brightness in 5% steps for the selection in the main window.
+- Optionally show the hidden main window after selected brightness changes, without taking focus, for a duration you choose.
+- IT can activate direct-purchase Pro licenses from the command line in the intended Windows user profile, without opening the app.
+
+### Improved
+
+- Browse Schedules, App Rules, and Hotkeys as compact cards that expand for editing, with smoother scrolling and reordering as your lists grow.
+- See clearer active and paused schedule and app-rule status, and resume paused automation directly from Displays.
+- Display, schedule, app-rule, and hotkey enable switches now apply immediately.
+
+### Fixed
+
+- Fixed Pro restoration for valid direct-purchase keys affected by removed purchase variants, while preserving existing licenses.
+- Fixed a responsiveness issue when turning off Local automation from Settings.
+
 ## v2.2.11 (September 24, 2026)
 This update gives you clearer automation control and more accurate multi-monitor feedback.
 

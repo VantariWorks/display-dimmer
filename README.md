@@ -23,7 +23,12 @@ Display Dimmer provides convenient brightness and contrast controls for external
 - Enable or disable DDC/CI separately for each display
 - Create scheduled brightness rules
 - Create app-based and fullscreen app rules
-- See when a manual brightness change pauses a rule and resume automation from the main window
+- See when a manual brightness change pauses a rule and resume automation from the main window or Displays in Settings
+- Browse compact schedule, app-rule, and hotkey cards that expand for editing
+- Save brightness, contrast, and temperature combinations as Pro presets
+- Recall presets from the main window, tray, hotkeys, schedules, app rules, or command line
+- Choose which levels a custom schedule or app rule changes
+- Scroll over the tray icon to adjust the selected displays in 5% steps
 - Use global hotkeys for brightness, contrast, and display actions
 - Use supported physical brightness keys
 - Use CLI and local automation with PowerShell, AutoHotkey, Task Scheduler, Stream Deck, and other tools
@@ -59,25 +64,41 @@ Display Dimmer also supports physical brightness keys on compatible keyboards an
 
 Display Dimmer Pro can be controlled locally from PowerShell, AutoHotkey, Task Scheduler, Stream Deck, Arduino sensor projects, and other tools.
 
-API 1.2 adds a guarded `--resume-automation` command so a script can return control to a previously active rule after a temporary manual brightness change. The wire protocol remains version 1; check the running app's advertised capabilities before using the command.
+Display Dimmer 2.2.12 adds saved preset listing and recall to API revision 1.2, alongside guarded `--resume-automation` for returning control after a temporary brightness change. The wire protocol remains version 1. Check the running app's advertised capabilities before using each feature; an updated CLI alone does not establish support.
 
 [View the Display Dimmer Local Automation documentation and examples](local-automation/README.md)
 
+IT can also activate a direct-purchase Pro license with a standalone command in
+the intended Windows user profile, even while the app is Free. That operation
+does not require a running app or enable Local automation. See
+[IT license deployment](local-automation/docs/it-license-deployment.md) and
+[managed Store updates](local-automation/docs/managed-store-updates.md).
+
 ## Display Dimmer Pro
 
-Display Dimmer includes core monitor brightness control, basic automation, and basic hotkey support for free.
+Display Dimmer includes core monitor brightness control, one All Displays
+schedule, one All Displays app rule, and two All Displays hotkeys for free.
 
 Display Dimmer Pro is an optional one-time upgrade that unlocks:
 
 - More schedules and app rules
 - More global hotkeys
 - Per-display automation and hotkey targeting
+- Saved display presets
 - Linked display groups
 - Unlimited color-temperature control and a blue light filter
 - Advanced display controls
 - All Pro themes
+- CLI and local automation
+
+Schedules, app rules, and hotkeys each have a 300-item safety limit; the preset
+library supports up to 300 saved presets.
 
 **No subscription.**
+
+Existing direct-purchase Pro keys remain supported in 2.2.12, including valid
+historical keys affected by removed purchase variants. Update the app before
+restoring an affected key; use the same key rather than purchasing again.
 
 ## Install Display Dimmer
 
@@ -113,7 +134,7 @@ When reporting a monitor-control issue, please include:
 
 - Display Dimmer is currently available for Windows 10 and Windows 11.
 - The app interface is currently in English.
-- Hardware brightness and contrast control is limited by what the monitor and display path support.
+- Hardware brightness and advanced raw VCP controls depend on the monitor and display path. The app's normal contrast control is software-based.
 - Software dimming is available when hardware brightness control is unavailable or unreliable.
 
 ## Repository Purpose

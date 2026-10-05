@@ -47,6 +47,8 @@ Do not copy this placeholder. Use the value from your machine.
 
 ## Create A Daily Task
 
+Open PowerShell in the downloaded repository's `local-automation` folder.
+
 Create or replace a daily task:
 
 ```powershell
@@ -60,6 +62,8 @@ The script validates the selected display before registering the task. If the ta
 
 ## Preview Only
 
+Open PowerShell in the downloaded repository's `local-automation` folder.
+
 Add `-WhatIf` to print what would be registered without creating the task:
 
 ```powershell
@@ -71,6 +75,8 @@ powershell -ExecutionPolicy Bypass -File ".\examples\task-scheduler\Create-Displ
 ```
 
 ## Run Immediately
+
+Open PowerShell in the downloaded repository's `local-automation` folder.
 
 Add `-RunNow` to register the task and immediately test that Windows can launch it:
 
@@ -162,6 +168,26 @@ $cliPath
 
 Use `--json` if another script needs to inspect success, partial success, or failures.
 
+## Run A Saved Preset
+
+For Display Dimmer 2.2.12, create a separate task manually if it should recall
+a saved Pro preset. The supplied `Create-DisplayDimmerBrightnessTask.ps1`
+remains brightness-only and does not accept a preset parameter.
+
+Save the preset in Settings > Presets, check the running app's `presets` and
+`list-presets` capabilities, and use `--list-presets --json` to find its ID.
+Use the installed CLI path as the task action's Program/script and these arguments:
+
+```text
+--apply-preset "Evening" --json
+```
+
+Replace `Evening` with the saved name or stable ID. New presets already contain
+their saved displays; do not add `--target`. Only older presets marked
+`requiresTarget: true` need one explicit target expression. The same logged-in
+user, running app, Pro and enabled Local automation requirements apply.
+See the [preset reference](../../docs/cli-api-v1.md#saved-preset-recall-api-12).
+
 ## Custom CLI Path
 
 The script normally resolves the installed `DisplayDimmer.Cli.exe` command automatically. Use `-CliPath` only when testing a source-built CLI or a custom install path.
@@ -173,6 +199,9 @@ $cliPath = (Get-Command DisplayDimmer.Cli.exe -ErrorAction Stop).Source
 ```
 
 Then pass it explicitly:
+
+Open PowerShell in the downloaded repository's `local-automation` folder for
+this relative script path.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\examples\task-scheduler\Create-DisplayDimmerBrightnessTask.ps1" `
