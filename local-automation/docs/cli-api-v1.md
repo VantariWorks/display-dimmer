@@ -16,7 +16,7 @@ For display control, it lets local scripts and tools send commands to the alread
 
 For a shorter user-facing guide, see [Control Display Dimmer From Local Scripts](local-automation-api.md). For runnable samples, see [examples](../examples).
 
-## Design Summary for Display Control
+## Design Summary
 
 - Local-only. No network listener.
 - Current-user named pipe IPC with an explicit pipe ACL.
@@ -976,6 +976,10 @@ After a manual/script override:
 
 The schedule still matches the current time, but this display is being held by a manual/script override. Click the paused automation status in Settings > Displays to resume saved automation for that display. Apply in the relevant automation tab can also resume it. Rule evaluation preserves app-rule priority; a covered schedule does not replace a matching app rule.
 
+You can also choose **Resume automation** in the main window. For a temporary script override, use the guarded `--resume-automation` command only after recording an unpaused rule and checking the expected brightness, as described above.
+
+An interrupted schedule's hold expires when that schedule occurrence ends or changes. This state cleanup preserves the current manual levels instead of forcing an older brightness back; a later distinct schedule occurrence can take control normally. An app-rule suspension clears when no matching app rule is still running for that display (for example, after closing the app), so a later matching app launch can take control normally.
+
 ### Cooperative External Automation Mode
 
 Use a named source such as `--source desk-light-sensor` when the script should cooperate with Display Dimmer schedules and app rules:
@@ -998,7 +1002,7 @@ Use this mode when a script should dim or restore immediately even if a schedule
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source cli
 ```
 
-This behaves like moving the Display Dimmer slider or using a hotkey. It interrupts schedules and suspends app rules for the targeted display identities until you resume them or the relevant rule is reapplied.
+This behaves like moving the Display Dimmer slider or using a hotkey. It interrupts schedules and suspends app rules for the targeted display identities until you resume or reapply them, the interrupted schedule occurrence ends or changes, or no matching app rule remains running for that display.
 
 ### Cooperative Sensor
 
@@ -1350,7 +1354,7 @@ High-impact VCP commands such as input switching, power mode, mute/screen blank,
 
 `--pretty` is not valid with `--watch`, and per-target watch filtering is not implemented in this build.
 
-## Current Limits for Local Automation
+## Current Limits
 
 Standalone license activation has its separate account/input/deployment limits above.
 

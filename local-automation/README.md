@@ -14,7 +14,7 @@ Display Dimmer 2.2.12 retains wire API **1** and revision **1.2**. The running a
 
 Display Dimmer 2.2.12+ also accepts a standalone Lemon Squeezy activation command. Run `DisplayDimmer.Cli.exe --activate-license --license-key-stdin --silent` in the intended Windows user context and supply the key through redirected stdin from your deployment secret store. Activation works while the app is Free and does not require a running app or Local automation. Restart an already-running app afterward. This is per-user licensing, not machine-wide activation or a wire API command. See [IT deployment](docs/it-license-deployment.md) for safe repeat deployment, account scope, exit codes and fleet rate staggering.
 
-## Requirements for display control
+## Requirements
 
 - Display Dimmer installed from the Microsoft Store.
 - Display Dimmer running in the current Windows user session.

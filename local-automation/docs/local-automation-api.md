@@ -263,6 +263,10 @@ For presence or no-motion dimming, prefer manual override mode unless you explic
 
 On occupancy return, a temporary manual dimmer can ask Display Dimmer to release the brightness interruption with API 1.2 `--resume-automation`, provided it recorded an unpaused rule before dimming and the target still has the expected idle level. The level check cannot distinguish a newer user action at that same percentage. A numeric restore is another manual write and does not resume the rule. Check the running app's capability; named-source cooperative handoff is the pre-existing alternative only when an active rule is allowed to keep control during the idle period.
 
+You can also choose **Resume automation** in the main window, click the paused automation status in Settings > Displays, or use Apply in the relevant automation tab. For a temporary script override, use the guarded `--resume-automation` command only after recording an unpaused rule and checking the expected brightness, as described above.
+
+An interrupted schedule's hold expires when that schedule occurrence ends or changes. This state cleanup preserves the current manual levels instead of forcing an older brightness back; a later distinct schedule occurrence can take control normally. An app-rule suspension clears when no matching app rule is still running for that display (for example, after closing the app), so a later matching app launch can take control normally.
+
 ```powershell
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source desk-light-sensor
 ```
