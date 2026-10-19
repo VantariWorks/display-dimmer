@@ -4,6 +4,30 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.13 (October 15, 2026)
+
+This update adds automatic dimming triggers, hardware brightness for supported laptop screens, and deeper software dimming.
+
+### New
+
+- Automatically dim All displays after a period of inactivity, then restore brightness when you return (Free).
+- Dim while Windows is locked, while running on battery power, or below a battery percentage you choose, with per-display configuration (Pro).
+- Choose hardware brightness for trigger dimming on supported monitors and laptop screens.
+- Control hardware brightness on supported laptop screens, with the main slider following changes made using laptop brightness keys.
+- See when triggers are active or interrupted, and resume paused triggers from the main window or Displays in Settings.
+
+### Improved
+
+- Software dimming can reach lower brightness levels on compatible SDR and HDR displays.
+- More responsive two-finger touchpad scrolling across Settings, dropdowns, and tray menus.
+- Refined low-brightness warnings when hardware and software dimming are combined.
+- Improved brightness recovery, automation handoffs, and diagnostic reporting.
+- Added Botanical and Dusk light themes (Pro), plus refined theme colors, hover effects, and spacing throughout Settings.
+
+### Fixed
+
+- Fixed an issue where scrolling over the tray icon could fail to adjust brightness on some displays.
+
 ## v2.2.12 (October 5, 2026)
 
 This update adds saved Pro presets, compact automation controls, and smoother everyday brightness control.
