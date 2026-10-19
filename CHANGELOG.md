@@ -4,6 +4,16 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.14 (October 19, 2026)
+
+This update improves brightness recovery and keeps Pro checks responsive.
+
+### Improved
+
+- Improved reliability when adjusting hardware and software brightness.
+- Improved transitions between hardware and software dimming.
+- More responsive Microsoft Store licence and price checks.
+
 ## v2.2.13 (October 15, 2026)
 
 This update adds automatic dimming triggers, hardware brightness for supported laptop screens, and deeper software dimming.
