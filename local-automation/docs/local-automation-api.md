@@ -12,7 +12,7 @@ Display Dimmer 2.2.12 introduced Pro saved-preset listing (`list-presets`) and r
 
 Display Dimmer 2.2.11 introduced conditional brightness automation resume in API **1.2**; 2.2.12 retains it. Check for the running app's `resume-automation` capability before using it.
 
-Display Dimmer 2.2.12 retains wire API **1** and revision **1.2**. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`.
+Display Dimmer 2.2.14 retains wire API **1** and revision **1.2**, inherited from 2.2.13. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`. Native Triggers and WMI brightness, introduced in 2.2.13, remain app features; the CLI has no command to configure Triggers or enable WMI. The schedule/app-rule state flags do not report Trigger ownership or interruptions.
 
 This works well for:
 
@@ -118,7 +118,7 @@ DisplayDimmer.Cli.exe --get-state --target all --pretty
 
 Brightness changes are live-only by default. Add `--save` only for scripts that should change saved Display Dimmer settings. `--save` is a settings write, not a cooperative sensor handoff. For a temporary manual dim, record that an active rule was unpaused before the write; only then use `--resume-automation --target <id> --expected-brightness <temporary-level>` to let the rule reassert. The command checks the tracked level, not who made the latest write. It writes no brightness and does not release temperature control. Check the running app's `resume-automation` capability first.
 
-Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command. In 2.2.13, successful `--resume-automation` also releases targeted manual Trigger interruptions; schedule/app-rule state flags alone cannot identify those interruptions.
 
 For each display, one selected app rule supplies its included brightness, contrast, and temperature levels. A schedule can supply levels that app rule leaves unchanged; another matching app rule cannot fill those omitted levels. App rules take priority over schedules for levels they include. Preset-linked rules use the preset's saved display targets and levels, not unapplied Presets edits.
 
@@ -194,11 +194,17 @@ DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode gamma --target dd_yo
 DisplayDimmer.Cli.exe --set-brightness 35 --brightness-mode ddc --target dd_your_stable_id
 ```
 
+In 2.2.13, normal brightness commands keep the current WMI/DDC/software preference unless `--brightness-mode` is supplied. An explicit `gamma`, `software`, or `ddc` mode disables normal WMI brightness before selecting that route; hardware release stays on the background worker. `--set-ddc` changes only the DDC preference and does not toggle WMI.
+
 Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change the saved DDC/CI preference. When the preference changes from enabled to disabled, Display Dimmer uses the same safety handoff as Settings: it sets and saves gamma brightness at 100%, preserves gamma contrast, and cancels pending low DDC brightness so the two dimming layers are not stacked accidentally. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. Enabling DDC/CI starts a background brightness read so Display Dimmer can adopt the monitor's current hardware level instead of immediately writing the software-dimming level to it. The command reply can arrive before this handoff completes, and newer brightness requests take precedence. `--set-ddc` saves the preference automatically, without `--save`.
+
+In 2.2.13, disable all Triggers that can target this display before capturing its state, allow any hardware brightness cap to finish restoring, and keep those Triggers disabled through dimming and restoration. The CLI schedule/app-rule state flags do not report Trigger caps or interruptions, so the sample guard cannot verify this prerequisite.
+
+This recipe requires DDC/CI hardware brightness VCP `0x10`; it is not a WMI laptop-backlight recipe. The CLI does not provide WMI enable, capture, or restore commands.
 
 Disabling DDC/CI no longer carries a low hardware brightness percentage into gamma. If a script intentionally needs to dim below normal brightness `0`, it must establish neutral gamma, perform an explicit verified raw VCP `0x10` hardware-brightness write, and then apply software/gamma dimming. This advanced pattern requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious values, validation, and restore behavior.
 
-Display Dimmer 2.2.12 cancels stale queued brightness writes after DDC is disabled and orders native writes to the same display. A raw command waits for an already-started hardware write; if the driver does not return, it can fail or time out. Stop on any failed response. The recipe is not an atomic transaction.
+From 2.2.12, disabling DDC cancels stale prepared ordinary brightness writes, and native writes to the same display wait for the preceding provider to return. A raw command can fail or time out if an already-started driver call does not return; check the response and each target result, and stop this sequence on failure. This does not make multiple commands/displays an atomic transaction or promise FIFO ordering. Wire API version 1 is unchanged.
 
 Use VCP commands only when you intentionally want to read or write a raw monitor DDC/CI hardware value:
 
@@ -257,7 +263,7 @@ By default, `--set-brightness` acts like a manual override. Pass `--source cli` 
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source cli
 ```
 
-Use `--set-brightness ... --source <name>` without `--save` for cooperative external controllers such as light sensors. The source name is a stable caller label, not extra access. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
+Use `--set-brightness ... --source <name>` without `--save` for cooperative external controllers such as light sensors. The source name is a stable caller label, not extra access. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
 
 For presence or no-motion dimming, prefer manual override mode unless you explicitly want schedules and app rules to win. An empty-room dimmer is usually a user-intent override, not a cooperative brightness handoff.
 

@@ -8,13 +8,13 @@ Display Dimmer 2.2.10 introduced temperature control in API **1.1**, including a
 
 Display Dimmer 2.2.11 introduced conditional brightness automation resume in API **1.2**. Display Dimmer 2.2.12 retained that command and added saved preset listing (`list-presets`) and recall (`presets`) to the same API revision. Check the running app's relevant capability before using those features. A newer preset already contains its display targets; older presets need one explicit `--target` at recall time.
 
-Display Dimmer 2.2.12 retains wire API **1** and revision **1.2**. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`.
+Display Dimmer 2.2.14 retains wire API **1** and revision **1.2**, inherited from 2.2.13. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`. Native Triggers and WMI brightness, introduced in 2.2.13, remain app features; the CLI has no command to configure Triggers or enable WMI. The schedule/app-rule state flags do not report Trigger ownership or interruptions.
 
 ## Unattended Pro activation for IT
 
 Display Dimmer 2.2.12+ also accepts a standalone Lemon Squeezy activation command. Run `DisplayDimmer.Cli.exe --activate-license --license-key-stdin --silent` in the intended Windows user context and supply the key through redirected stdin from your deployment secret store. Activation works while the app is Free and does not require a running app or Local automation. Restart an already-running app afterward. This is per-user licensing, not machine-wide activation or a wire API command. See [IT deployment](docs/it-license-deployment.md) for safe repeat deployment, account scope, exit codes and fleet rate staggering.
 
-## Requirements
+## Requirements for display control
 
 - Display Dimmer installed from the Microsoft Store.
 - Display Dimmer running in the current Windows user session.
@@ -183,11 +183,11 @@ By default, `--set-brightness` acts like a manual override. Pass `--source cli` 
 
 If a script temporarily overrides an active rule, record that the rule was unpaused before the write. When the temporary level is no longer needed, API 1.2 `--resume-automation --target <stable-id> --expected-brightness <temporary-level>` can release that brightness interruption without restoring a stale number; check the running app's `resume-automation` capability first. The expected level detects a different later percentage, but cannot identify a newer user action at the same percentage. The named-source cooperative handoff below already existed in 2.2.10 and does not dim through an active rule.
 
-Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command. In 2.2.13, successful `--resume-automation` also releases targeted manual Trigger interruptions; schedule/app-rule state flags alone cannot identify those interruptions.
 
 For each display, one selected app rule supplies its included brightness, contrast, and temperature levels. A schedule can supply levels that app rule leaves unchanged; another matching app rule cannot fill those omitted levels. App rules take priority over schedules for levels they include. Preset-linked rules use the preset's saved display targets and levels, not unapplied Presets edits.
 
-Use a named source such as `desk-light-sensor` for cooperative sensor integrations. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
+Use a named source such as `desk-light-sensor` for cooperative sensor integrations. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
 
 Use `--update-external-brightness` when the script is already standing by and should only keep its desired handoff value fresh. Pass the same named `--source` you use for cooperative sensor commands. This command does not move the display and does not interrupt schedules or app rules.
 
@@ -221,6 +221,8 @@ See the [temperature reference](docs/cli-api-v1.md#temperature-control-api-11) f
 ## DDC/CI, Gamma, And VCP
 
 Normal `--set-brightness` uses Display Dimmer's normal brightness path for each display: DDC/CI when enabled and healthy, or software/gamma when DDC/CI is disabled, unavailable, or unreliable. Use `--brightness-mode gamma` or `--brightness-mode software` when a script should disable DDC/CI first, move through a safe neutral 100% gamma handoff, and then set the requested software/gamma brightness. Use `--brightness-mode ddc` when a script should enable DDC/CI first, then set brightness through Display Dimmer's normal DDC-capable path.
+
+In 2.2.13, normal brightness commands keep the current WMI/DDC/software preference unless `--brightness-mode` is supplied. An explicit `gamma`, `software`, or `ddc` mode disables normal WMI brightness before selecting that route; hardware release stays on the background worker. `--set-ddc` changes only the DDC preference and does not toggle WMI.
 
 Use `--set-ddc enabled` or `--set-ddc disabled` when a script needs to change the saved DDC/CI preference. When the preference changes from enabled to disabled, Display Dimmer sets and saves gamma brightness at a neutral 100% while preserving gamma contrast, preventing accidental double dimming over low monitor hardware brightness. Repeating `--set-ddc disabled` while DDC/CI is already disabled is a no-op. Enabling DDC/CI starts a background brightness read so Display Dimmer can adopt the monitor's current hardware level instead of immediately writing the software-dimming level to it. The command reply can arrive before this handoff completes, and newer brightness requests take precedence. `--set-ddc` saves the preference automatically, without `--save`.
 

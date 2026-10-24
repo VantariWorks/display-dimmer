@@ -8,7 +8,7 @@ Display Dimmer 2.2.12 adds saved preset listing and recall to API revision **1.2
 
 Display Dimmer 2.2.11 introduced conditional brightness automation resume in API revision **1.2** (`resume-automation` capability); 2.2.12 retains it. It lets a temporary brightness controller release a manual schedule/app-rule interruption without writing a stale pre-override level. Cooperative named-source brightness handoff to schedules and app rules was already available in 2.2.10; it is a separate, pre-existing contract.
 
-Display Dimmer 2.2.12 retains wire API **1** and revision **1.2**. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`.
+Display Dimmer 2.2.14 retains wire API **1** and revision **1.2**, inherited from 2.2.13. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`. Native Triggers and WMI brightness, introduced in 2.2.13, remain app features; the CLI has no command to configure Triggers or enable WMI. The schedule/app-rule state flags do not report Trigger ownership or interruptions.
 
 The user-facing executable is the Display Dimmer command-line tool (`DisplayDimmer.Cli.exe`).
 
@@ -30,7 +30,7 @@ For a shorter user-facing guide, see [Control Display Dimmer From Local Scripts]
 - Temperature is temporary by default, with a separate unsaved session baseline. Manual temperature set/adjust commands accept `--save`; contrast remains live-only.
 - Temperature ownership is independent of brightness ownership. A temperature-only override does not interrupt rule-driven brightness.
 - `--set-brightness` with `--source cli`, or no `--source`, behaves like a manual live override.
-- `--set-brightness` with any other `--source <name>` is cooperative external automation when `--save` is omitted: it stands down when a schedule or app rule owns brightness and remembers a fresh handoff value. Contrast-only and temperature-only rules leave brightness available and keep running. A named brightness request with `--save` keeps manual/saved override behavior.
+- `--set-brightness` with any other `--source <name>` is cooperative external automation when `--save` is omitted: it stands down when a schedule or app rule owns brightness and remembers a fresh handoff value. Contrast-only and temperature-only rules leave brightness available and keep running. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. A named brightness request with `--save` keeps manual/saved override behavior.
 
 Security note: the local automation pipe is created with a current-user Windows ACL. Other Windows accounts are not granted access. Any process running in your Windows account can still send commands, so this is a local automation feature, not an authentication boundary between programs in the same account session.
 
@@ -202,9 +202,9 @@ The equivalent named-pipe request is `{"apiVersion":1,"command":"resume-automati
 
 For a temporary script override, use the stable physical display target ID returned by `--get-state` so the script can confirm it is resuming the same display. The CLI also accepts the other supported target forms, including multiple displays. The command compares the app's **tracked** brightness with `--expected-brightness` for each resolved display. On a mismatch, that display returns `expectedBrightnessMismatch` and retains its existing ownership state. On success, Display Dimmer clears that display's brightness schedule/app-rule interruption and requests a fresh rule evaluation; `"Resume requested"` does not promise that a rule is still active or that hardware has already finished moving. Poll `--get-state` to observe the resulting level and owner. The command does not write brightness, change saved settings, or release a temperature override. It does not accept `--source` or `--save`.
 
-This differs from the pre-existing named-source handoff: `--set-brightness ... --source <name>` without `--save` stands down when a schedule or app rule owns brightness and remembers a fresh external value for later handoff. Contrast-only and temperature-only rules leave brightness available. Cooperative updates do not clear existing manual interruptions. The 2.2.10 app supports that cooperative handoff, but its CLI cannot explicitly release a manual brightness interruption.
+This differs from the pre-existing named-source handoff: `--set-brightness ... --source <name>` without `--save` stands down when a schedule or app rule owns brightness and remembers a fresh external value for later handoff. Contrast-only and temperature-only rules leave brightness available. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Cooperative updates do not clear existing manual interruptions. The 2.2.10 app supports that cooperative handoff, but its CLI cannot explicitly release a manual brightness interruption.
 
-Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command. In 2.2.13, a successful `--resume-automation` also releases targeted manual Trigger interruptions; its state response still has no Trigger interruption flags.
 
 Only use `--resume-automation` after recording that the target was *not already interrupted* before your temporary override. The level comparison protects against a different later level, but cannot distinguish another manual action that happened to choose the same percentage. A newer manual action at that same percentage is an unresolved ambiguity; automation clients should avoid blindly releasing another user's intervention.
 
@@ -254,6 +254,8 @@ Only use `--resume-automation` after recording that the target was *not already 
 | `--source <name>` | brightness set/adjust/refresh and all temperature commands | Use `cli` or omit source for manual control. Other names identify cooperative controllers; brightness set/adjust with `--save` still uses manual/saved override behavior. Temperature considers temperature ownership only, not brightness ownership. Temperature refresh requires an explicit non-`cli` name; named temperature resume retires only that source. Contrast does not accept source. |
 | `--timeout <ms>` | IPC commands | Override the Local automation timeout. |
 | `--no-start` | reserved | Reserved for future app-start behavior. |
+
+In 2.2.13, an explicit `--brightness-mode gamma`, `software`, or `ddc` first disables normal WMI brightness for the target, then selects the requested route. The existing background worker releases WMI ownership; the command does not wait for native hardware confirmation. Without `--brightness-mode`, brightness commands keep the current WMI/DDC/software preference. `--set-ddc` remains specific to the DDC preference and does not toggle WMI.
 
 `--set-ddc` examples use `enabled` and `disabled`. For script convenience, the parser also accepts `enable`, `disable`, `on`, `off`, `true`, `false`, `1`, and `0`.
 
@@ -573,15 +575,19 @@ When `--set-ddc` changes the saved preference from enabled to disabled, it uses 
 
 ### Extra-Dark Dimming
 
+From 2.2.12, disabling DDC cancels stale prepared ordinary brightness writes, and native writes to the same display wait for the preceding provider to return. A raw command can fail or time out if an already-started driver call does not return; check the response and each target result, and stop this sequence on failure. This does not make multiple commands/displays an atomic transaction or promise FIFO ordering. Wire API version 1 is unchanged.
+
 Most scripts should use normal `--set-brightness`. Disabling DDC/CI no longer transfers a low hardware brightness percentage into gamma. Extra-dark dimming therefore requires an explicit advanced opt-in:
 
 1. Establish neutral 100% gamma through `--brightness-mode gamma`, which also safely disables DDC/CI.
 2. Read raw VCP `0x10` and its monitor-reported maximum, then write a cautious low hardware value with verification.
 3. Apply the intended software/gamma brightness explicitly.
 
-This deliberately combines raw monitor hardware brightness with Display Dimmer gamma dimming. VCP `0x10` values are monitor-specific and are not necessarily percentages. The pattern requires Display Dimmer > Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off, and the script must capture enough state to restore both layers. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious copy-paste commands, validation, and restore behavior.
+In 2.2.13, disable all Triggers that can target this display before capturing its state, allow any hardware brightness cap to finish restoring, and keep those Triggers disabled through dimming and restoration. The CLI schedule/app-rule state flags do not report Trigger caps or interruptions, so the sample guard cannot verify this prerequisite.
 
-Display Dimmer 2.2.12 cancels stale queued brightness writes after DDC is disabled and orders native writes to the same display. A raw command waits for an already-started hardware write; if the driver does not return, it can fail or time out. Stop on any failed response. The recipe is not an atomic transaction.
+This recipe requires DDC/CI hardware brightness VCP `0x10`; it is not a WMI laptop-backlight recipe. The CLI does not provide WMI enable, capture, or restore commands.
+
+This deliberately combines raw monitor hardware brightness with Display Dimmer gamma dimming. VCP `0x10` values are monitor-specific and are not necessarily percentages. The pattern requires Display Dimmer > Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off, and the script must capture enough state to restore both layers. See [Automation Recipes](../examples/automation-recipes/README.md#extra-dark-dimming) for cautious copy-paste commands, validation, and restore behavior.
 
 Normal `--set-contrast` stays on Display Dimmer's software/gamma contrast path. It does not change the monitor's hardware OSD contrast setting.
 
@@ -763,7 +769,7 @@ Key fields:
 | `identity` | Raw Display Dimmer/Windows identity for diagnostics. Not a public stable target form. |
 | `deviceName` | Windows display device name for diagnostics. Do not use `\\.\DISPLAY1`-style names in saved scripts. |
 | `isPrimary` | Whether this is the current Windows primary display. |
-| `controlMode` | `ddc`, `software`, `disabled`, or `unknown`. |
+| `controlMode` | `ddc`, `wmi`, `software`, `disabled`, or `unknown`. `wmi` means the internal panel's verified WMI hardware route is active. |
 | `brightness` | Current Display Dimmer brightness state. |
 | `scheduleActive` | A schedule is active or currently eligible for this display; it can be covered by an app rule or include only contrast/temperature. Not proof of brightness ownership. |
 | `scheduleInterrupted` | A manual/script override has paused schedule control for this display. |
@@ -988,7 +994,7 @@ Use a named source such as `--source desk-light-sensor` when the script should c
 DisplayDimmer.Cli.exe --set-brightness 65 --target dd_your_stable_id --source desk-light-sensor
 ```
 
-With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
+With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
 
 ## Sensor And External Automation Pattern
 
@@ -1304,7 +1310,7 @@ Then inspect each item in `results`. Common examples are a connected target with
 
 Check the command source and automation state.
 
-If you used a named source such as `--source desk-light-sensor` without `--save`, Display Dimmer treats the command as cooperative external automation. When an uninterrupted schedule or app rule owns brightness on the target, the command can refresh the handoff value without moving the display.
+If you used a named source such as `--source desk-light-sensor` without `--save`, Display Dimmer treats the command as cooperative external automation. When an uninterrupted schedule or app rule owns brightness on the target, the command can refresh the handoff value without moving the display. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write.
 
 By default, `--set-brightness` acts like a manual override and can interrupt Display Dimmer automation. Pass `--source cli` when you want that intent to be explicit in a saved script:
 
