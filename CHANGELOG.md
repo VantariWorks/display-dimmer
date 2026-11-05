@@ -4,6 +4,28 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.15 (November 5, 2026)
+
+This update fixes Windows Night light compatibility, improves display recovery and automation, and adds more ways to customize the main window.
+
+### New
+
+- Added an option to show or hide the display dropdown in the main window.
+- Added Minimize buttons to the main window and Settings.
+- Cycle through displays and linked groups using a hotkey.
+
+### Improved
+
+- Improved display detection, with Retry detection and help when no displays are found.
+- Improved hardware brightness recovery on supported laptop screens, with Try again in Displays.
+- Clearer automation status and Resume controls in the main window and Settings.
+- Clearer shortcut recording, tooltips, and Settings wording.
+
+### Fixed
+
+- Fixed an issue where Display Dimmer could remove Windows Night light’s warm tint while Night light was still on.
+- Fixed manual brightness changes pausing contrast or temperature controlled by schedules or app rules. Presets now pause only the controls they change.
+
 ## v2.2.14 (October 19, 2026)
 
 This update improves brightness recovery and keeps Pro checks responsive.
