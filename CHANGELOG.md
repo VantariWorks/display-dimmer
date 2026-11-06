@@ -255,11 +255,19 @@ display groups for larger multi-monitor setups.
 
 ## v2.1.25 (April 20, 2026)
 
+This update adds fullscreen-aware app rules and more flexible All Displays controls, with improved display recovery and automation.
+
+### New
+
 - Added fullscreen-aware app rules, including a Pro option to apply fullscreen
   rules only to the display running the fullscreen app.
 - Added a Settings option for All Displays brightness behavior: relative mode
   to preserve per-display differences, or absolute mode to set every display to
   the same level.
+- Added startup render-crash recovery with software-render fallback.
+
+### Improved
+
 - Improved All Displays slider behavior at 0%, 100%, and in mixed-monitor
   setups.
 - Improved schedule and app-rule status text, selected-scope persistence,
@@ -269,13 +277,19 @@ display groups for larger multi-monitor setups.
 - Improved DDC/CI write stability and reduced redundant monitor brightness
   writes.
 - Improved manual contrast persistence after mouse and keyboard adjustments.
-- Added startup render-crash recovery with software-render fallback.
-- Fixed a rare crash that could occur on some devices when clicking a URL in
-  the About tab.
 - Improved diagnostics and hang reporting performance.
 - General stability and performance improvements.
 
+### Fixed
+
+- Fixed a rare crash that could occur on some devices when clicking a URL in
+  the About tab.
+
 ## v2.1.24 (April 5, 2026)
+
+This update improves update notifications, Pro messaging, and startup reliability.
+
+### Improved
 
 - Improved update notification behavior so update prompts can be deferred and
   shown from the main window more reliably.
@@ -284,22 +298,36 @@ display groups for larger multi-monitor setups.
 
 ## v2.1.23 (April 1, 2026)
 
-- Fixed an issue where Display Dimmer could still show its main window at
-  startup when Start with Windows was enabled and Launch behavior was set to
-  Start in tray.
-- Fixed a scheduling issue that could affect brightness rules after changing
-  display order.
+This update improves Settings responsiveness and startup handling, and fixes Start in tray and scheduling issues.
+
+### Improved
+
 - Improved Settings window responsiveness and scrolling.
 - Improved schedule/app-rule Apply behavior and status updates.
 - Improved startup, update notification, and autostart handling.
 - Miscellaneous stability and reliability improvements.
 
+### Fixed
+
+- Fixed an issue where Display Dimmer could still show its main window at
+  startup when Start with Windows was enabled and Launch behavior was set to
+  Start in tray.
+- Fixed a scheduling issue that could affect brightness rules after changing
+  display order.
+
 ## v2.1.22 (March 11, 2026)
 
-- Fixed a rare startup stability issue.
+This update improves startup and update notifications, with a fix for a rare startup stability issue.
+
+### Improved
+
 - Improved update notification and startup handling.
 - Improved rate-prompt eligibility checks.
 - General reliability improvements.
+
+### Fixed
+
+- Fixed a rare startup stability issue.
 
 ## v2.1.21 (March 4, 2026)
 
