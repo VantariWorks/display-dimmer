@@ -24,7 +24,7 @@ For a real integration, show the display list during setup and store the selecte
 
 - Display Dimmer must already be running.
 - Local automation requires Display Dimmer Pro.
-- Local automation must be turned on in Settings > General > Advanced > Local automation > Manage...
+- Local automation must be turned on in Settings > General > Advanced > Local automation
 - The installed `DisplayDimmer.Cli.exe` command must be available in PowerShell.
 - Run the C# app as the same Windows user as Display Dimmer.
 

@@ -1,5 +1,7 @@
 # Task Scheduler Example
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 This example creates a Windows Task Scheduler task that calls `DisplayDimmer.Cli.exe`.
 
 For a long-running watcher that dims after Windows user inactivity and starts at sign-in, use the separate [Windows inactivity dimmer](../windows-inactivity-dimmer/) example and its logon-task helper.
@@ -20,7 +22,7 @@ This is useful for automation outside Display Dimmer's built-in scheduler:
 - Install or update Display Dimmer from the Microsoft Store.
 - Local automation requires Display Dimmer Pro.
 - Display Dimmer must already be running when the task fires.
-- Local automation must be turned on in Settings > General > Advanced > Local automation > Manage...
+- Local automation must be turned on in Settings > General > Advanced > Local automation
 - The task must run as the same Windows user who is running Display Dimmer.
 - Use "Run only when user is logged on".
 - Do not use service/session 0 tasks for display control.

@@ -23,7 +23,7 @@ Display Dimmer provides convenient brightness and contrast controls for external
 - Enable or disable DDC/CI separately for each display
 - Create scheduled brightness rules
 - Create app-based and fullscreen app rules
-- See when a manual brightness change pauses a rule and resume automation from the main window or Displays in Settings
+- See which automated levels a manual change has paused, and resume saved schedules or app rules from the main window or Settings
 - Browse compact schedule, app-rule, and hotkey cards that expand for editing
 - Save brightness, contrast, and temperature combinations as Pro presets
 - Recall presets from the main window, tray, hotkeys, schedules, app rules, or command line
@@ -52,7 +52,7 @@ Schedules are useful for day and night brightness changes. App rules are useful 
 
 When an automation rule ends normally, Display Dimmer restores the previous brightness level so the display setup remains predictable.
 
-If a manual brightness adjustment interrupts an active schedule or app rule, the main window shows the interruption and offers **Resume automation**. When that interrupted session ends, Display Dimmer keeps the user's current levels and clears the interruption, allowing a later session to take control normally.
+In Display Dimmer 2.2.15, a manual brightness adjustment pauses only automated brightness; contrast and temperature continue independently. Manual contrast and temperature adjustments pause only their own level, and presets pause only the levels they include. The main window and Settings show the paused levels and offer Resume actions for saved automation. Resume keeps unfinished Settings edits. When an interrupted session ends, Display Dimmer keeps the user's current levels and allows a later automation session to take control normally.
 
 ## Global Hotkeys and Brightness Keys
 

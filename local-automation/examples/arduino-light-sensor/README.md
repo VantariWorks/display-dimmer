@@ -1,5 +1,7 @@
 # Arduino Light Sensor Bridge
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 This folder contains an advanced Local automation sample for Display Dimmer.
 
 Use it as a starting point for local hardware integrations.
@@ -61,7 +63,7 @@ By default, this only changes live brightness. It does not save brightness setti
 1. Upload `ArduinoLightSensor.ino` to the Arduino.
 2. Close Arduino Serial Monitor so PowerShell can use the COM port.
 3. Start the Microsoft Store version of Display Dimmer.
-4. Open Display Dimmer > Settings > General > Advanced > Local automation > Manage..., unlock Pro if prompted, and turn on Local automation.
+4. Open Display Dimmer > Settings > General > Advanced > Local automation, unlock Pro if prompted, and turn on Local automation.
 5. Run `DisplayDimmer.Cli.exe --list-displays` and copy the `targetId` for your display. Prefer a `dd_...` value for a bridge you plan to keep running.
 6. Run the bridge in dry-run mode first:
 
@@ -223,7 +225,7 @@ Close Arduino Serial Monitor before running the PowerShell bridge. Only one prog
 
 Install or update Display Dimmer from the Microsoft Store, then start Display Dimmer from the Start menu or tray.
 
-Open Display Dimmer > Settings > General > Advanced > Local automation > Manage..., unlock Pro if prompted, and turn on Local automation.
+Open Display Dimmer > Settings > General > Advanced > Local automation, unlock Pro if prompted, and turn on Local automation.
 
 Open PowerShell and confirm the Display Dimmer command-line tool is available:
 
@@ -254,7 +256,7 @@ The PowerShell bridge script uses PowerShell parameters with one dash:
 
 `DisplayDimmer.Cli.exe` uses command-line options with two dashes:
 
-```powershell
+```text
 --target dd_your_stable_id --json
 ```
 
@@ -437,8 +439,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\examples\arduino-light-se
 With `-IgnoreAutomationResume`:
 
 - the bridge uses `--source cli` and keeps sending sensor brightness commands
-- clicking Apply to resume a schedule does not make that schedule take over
-- clicking Apply to resume an app rule does not make that app rule take over
+- choosing Resume schedules does not keep scheduled brightness in control while the bridge continues sending manual brightness
+- choosing Resume app rules does not keep app-rule brightness in control while the bridge continues sending manual brightness
 - the next sensor update is treated as a new manual/script override
 
 Stop the bridge with `Ctrl+C` when you want the sensor integration fully disabled.

@@ -1,5 +1,7 @@
 # Windows Inactivity Dimmer
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 Dim eligible screens after five minutes without keyboard or mouse input. When you return, the watcher resumes an automation rule that was active before idle; otherwise it restores each screen's captured brightness. The default idle level is 20%. The watcher uses Display Dimmer's [Local automation CLI](../../docs/local-automation-api.md); it does not set the DDC/CI preference or save a new brightness baseline.
 
 With a running Display Dimmer 2.2.10 app, the watcher dims and restores displays that remain without an active rule throughout the idle cycle; it skips automation-owned displays. Dimming through an active rule and resuming it requires a running 2.2.11 or later app advertising `resume-automation`.
@@ -14,7 +16,7 @@ This example has two scripts:
 ## Before You Start
 
 1. Start Display Dimmer. For automatic sign-in startup, enable its **Start with Windows** setting.
-2. Unlock Pro and enable **Settings > General > Advanced > Local automation > Manage...**.
+2. Unlock Pro and enable **Settings > General > Advanced > Local automation**.
 3. In PowerShell, verify that `DisplayDimmer.Cli.exe --get-state --target all --json` succeeds. Automatic schedule/app-rule resume needs a running app whose response lists `resume-automation` in `capabilities`; older builds are skipped when an active rule owns the display. If the command is unavailable, use `-CliPath "C:\path\to\DisplayDimmer.Cli.exe"` with the scripts below.
 4. Keep these example files in a permanent folder if you create a scheduled task. The task runs the script from that exact path.
 

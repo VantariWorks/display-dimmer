@@ -1,5 +1,7 @@
 # Stream Deck And Macro Button Examples
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 These examples show how to run `DisplayDimmer.Cli.exe` from Stream Deck or another macro tool that can launch a program with arguments.
 
 Stream Deck buttons are user-triggered actions, so the examples use manual override behavior. That means they can interrupt active Display Dimmer schedules or app rules for the targeted displays.

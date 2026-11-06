@@ -1,13 +1,13 @@
 # Managed Microsoft Store updates
 
-Applies to Display Dimmer 2.2.12. This guide explains the app's update behavior
+Applies to Display Dimmer 2.2.12 through 2.2.15. This guide explains the app's update behavior
 and Microsoft Store controls for managed Windows deployments.
 
 ## What Display Dimmer does
 
 The app does not download or install its own updates. It checks the small
 `https://displaydimmer.com/latest-version.txt` file with a bounded request and a
-saved 24-hour throttle. When Main is visible and ready, an available-version
+saved 24-hour throttle. When the main window is visible and ready, an available-version
 notice offers **Not now** or **Update**; Update opens the Microsoft Store product
 page. It does not stop the app or revoke Pro because an update is available.
 

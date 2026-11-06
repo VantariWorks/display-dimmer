@@ -1,5 +1,7 @@
 # Automation Recipes
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 These recipes show common ways to control Display Dimmer from scripts and local automation tools.
 
 Use these examples when you want a practical command pattern, not a full sample project.
@@ -267,7 +269,7 @@ A few details matter:
 - In 2.2.13 and 2.2.14, disable all Triggers that can target this display before capturing its state, allow any hardware brightness cap to finish restoring, and keep those Triggers disabled through dimming and restoration. The CLI schedule/app-rule state flags do not report Trigger caps or interruptions, so the sample guard cannot verify this prerequisite.
 - This works only on a physical display whose DDC/CI path supports hardware brightness VCP `0x10`. It is not a linked-group command or a WMI laptop-backlight recipe. The CLI does not provide WMI enable, capture, or restore commands.
 - VCP `0x10` uses the monitor's raw range, not a guaranteed percentage. Read `vcpMax`, calculate a cautious value, and start brighter than you think you need.
-- This recipe requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. Otherwise the asynchronous safety reset can restore hardware brightness to 100 after the script writes its low raw value.
+- This recipe requires Settings > General > **Reset hardware brightness on exit (DDC/CI and WMI)** to be turned off. Otherwise the asynchronous safety reset can restore hardware brightness to 100 after the script writes its low raw value.
 - Capture Display Dimmer brightness, DDC/CI mode, and raw hardware brightness before dimming. The DDC-off safety handoff can save a 100% baseline, so the restore uses `--save` to put the captured brightness back.
 - Use `--source cli` when extra-dark dimming should behave like a manual override. For no-motion dimming, this prevents schedules and app rules from immediately reasserting over an empty-room dim.
 - This advanced sequence also changes DDC mode, raw VCP brightness, and saved brightness. Keep schedules and app rules inactive throughout capture, dim, and restore: its `--save` can promote an automation level into the manual baseline if a rule starts after the initial check. Recheck state before either `--save`; stop and restore manually if a rule became active. The sample does not attempt automation resume or treat the simple guarded toggle release as a substitute for hardware restoration.

@@ -1,5 +1,7 @@
 # AutoHotkey Shortcuts
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 This example uses AutoHotkey v2 to call `DisplayDimmer.Cli.exe` from keyboard shortcuts.
 
 The supplied hotkeys remain brightness/DDC-focused. For API 1.1 temperature commands you can bind separately, see the [temperature reference](../../docs/cli-api-v1.md#temperature-control-api-11). Manual temperature hotkeys should use manual-source semantics rather than cooperative background ownership.

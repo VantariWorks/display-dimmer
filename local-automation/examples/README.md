@@ -17,7 +17,7 @@ requirements below still apply to these examples.
 - Display Dimmer running.
 - Display Dimmer Pro.
 - Local automation enabled in Display Dimmer:
-  Settings > General > Advanced > Local automation > Manage...
+  Settings > General > Advanced > Local automation
 - `DisplayDimmer.Cli.exe` is available from PowerShell.
 
 Check that the CLI is available:
@@ -78,7 +78,7 @@ If a display only has a `display_N` target, rerun `--list-displays` after dockin
 - [Arduino motion sensor + Nokia LCD](arduino-motion-sensor-lcd/)
   Shows the same motion workflow with a Nokia 5110 / PCD8544 LCD status display.
 
-## Saved Preset Examples (2.2.12)
+## Saved Preset Examples (2.2.12 and later)
 
 Save a Pro preset in Settings > Presets first. Check the running app's
 `list-presets` and `presets` capabilities, then list and recall saved presets:
@@ -99,6 +99,18 @@ See [preset recall](../docs/cli-api-v1.md#saved-preset-recall-api-12), the
 The existing sensor bridges and brightness task-registration helper remain
 brightness-focused; they do not gain preset parameters automatically.
 
+## Automation Compatibility
+
+Display Dimmer 2.2.15 keeps brightness, contrast and temperature control separate. A manual brightness command pauses only automated brightness; a manual contrast or temperature command pauses only that level. A preset pauses the levels it includes and leaves the others under their existing control.
+
+The examples retain their existing conservative checks. `scheduleActive` and `perAppActive` can describe color-only rules, while the brightness-interruption flags do not summarize every paused level. A bridge may therefore stand by even when a color-only rule leaves brightness available. See the [state-field reference](../docs/cli-api-v1.md#display-fields) for the exact fields and limitations.
+
+`--resume-automation` also releases manual contrast holds, and from 2.2.13 onward it can release Trigger interruptions. Its expected-brightness check does not protect a manual contrast choice or identify Trigger ownership. Use these temporary-dimming examples only when releasing those interruptions is intended. `--resume-temperature` is separate.
+
+Check the running app's capabilities before using preset or Resume commands. API revision 1.2 alone does not distinguish the older whole-rule behavior from 2.2.15's separate-level behavior.
+
+After updating, review any brightness safety notice in the main window before testing very low software brightness. The app can keep a low request at a brighter level while that protection applies; use `--get-state` to inspect the effective brightness.
+
 ## Script Guidance
 
 Use JSON output when another tool needs to inspect success, errors, or partial success:
@@ -107,11 +119,11 @@ Use JSON output when another tool needs to inspect success, errors, or partial s
 DisplayDimmer.Cli.exe --set-brightness 40 --target primary --json --pretty
 ```
 
-Use `--source cli` for scripts that should act like manual overrides and interrupt schedules/app rules. That is usually the right choice for buttons, hotkeys, task actions, and no-motion dimming.
+Use `--source cli` for scripts that should act like manual overrides and pause the corresponding automated level. That is usually the right choice for buttons, hotkeys, task actions, and no-motion dimming.
 
 API 1.2 `--resume-automation` is for a temporary brightness override whose script recorded an active, unpaused rule before dimming and can verify the same physical display still has its own dim level. The inactivity watcher, motion bridges, and toggle recipe use it. One-way buttons and scheduled actions deliberately remain manual; named-source sensor handoff already works without it. The running app must advertise `resume-automation` in `--get-state` capabilities. Its expected-level check cannot distinguish a newer user action that chose the same percentage.
 
-In 2.2.13 and 2.2.14, the state flags used by these examples do not expose Trigger ownership or interruptions. A cooperative named brightness write still stands down for an active unsuppressed Trigger, but sample resume decisions based only on schedule/app-rule flags cannot identify a Trigger-only interruption. `--resume-automation` releases targeted Trigger interruptions too; do not infer that release is safe from those flags alone.
+From 2.2.13 onward, the state flags used by these examples do not expose Trigger ownership or interruptions. A cooperative named brightness write still stands down for an active unsuppressed Trigger, but sample resume decisions based only on schedule/app-rule flags cannot identify a Trigger-only interruption. `--resume-automation` releases targeted Trigger interruptions too; do not infer that release is safe from those flags alone.
 
 Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command.
 

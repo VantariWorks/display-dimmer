@@ -1,5 +1,7 @@
 # Arduino Motion Sensor Bridge
 
+For Display Dimmer 2.2.15's separate brightness, contrast and temperature pauses, and the Resume behavior used by these examples, see [Automation compatibility](../README.md#automation-compatibility).
+
 This example reads a digital motion sensor from an Arduino Uno and controls Display Dimmer from PowerShell.
 
 This bridge remains brightness-only. For independent API 1.1 color-temperature/blue-light-filter automation, see the [temperature command reference](../../docs/cli-api-v1.md#temperature-control-api-11). The motion script does not accept temperature options.
@@ -100,7 +102,7 @@ Close Serial Monitor before running the PowerShell bridge. Only one program can 
 
 Install or update Display Dimmer from the Microsoft Store, then start Display Dimmer from the Start menu or tray.
 
-Open Display Dimmer > Settings > General > Advanced > Local automation > Manage..., unlock Pro if prompted, and turn on Local automation.
+Open Display Dimmer > Settings > General > Advanced > Local automation, unlock Pro if prompted, and turn on Local automation.
 
 Open PowerShell and confirm the Display Dimmer command-line tool is available:
 
@@ -128,7 +130,7 @@ The PowerShell bridge script uses PowerShell parameters with one dash:
 
 `DisplayDimmer.Cli.exe` uses command-line options with two dashes:
 
-```powershell
+```text
 --target dd_your_stable_id --json
 ```
 

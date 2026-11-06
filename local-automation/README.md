@@ -8,7 +8,9 @@ Display Dimmer 2.2.10 introduced temperature control in API **1.1**, including a
 
 Display Dimmer 2.2.11 introduced conditional brightness automation resume in API **1.2**. Display Dimmer 2.2.12 retained that command and added saved preset listing (`list-presets`) and recall (`presets`) to the same API revision. Check the running app's relevant capability before using those features. A newer preset already contains its display targets; older presets need one explicit `--target` at recall time.
 
-Display Dimmer 2.2.14 retains wire API **1** and revision **1.2**, inherited from 2.2.13. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`. Native Triggers and WMI brightness, introduced in 2.2.13, remain app features; the CLI has no command to configure Triggers or enable WMI. The schedule/app-rule state flags do not report Trigger ownership or interruptions.
+Display Dimmer 2.2.15 retains wire API **1** and revision **1.2**, unchanged from 2.2.14. The running app advertises `temperature`, `temperature-kelvin`, `external-temperature`, `presets`, `list-presets`, and `resume-automation`; check the relevant capability, not just `--api-version`. Native Triggers and WMI brightness, introduced in 2.2.13, remain app features; the CLI has no command to configure Triggers or enable WMI. The schedule/app-rule state flags do not report Trigger ownership or interruptions.
+
+In **2.2.15**, a manual brightness command pauses brightness from the active schedule or app rule while its contrast and temperature continue. Manual contrast and temperature commands pause only their own level. Presets pause only the levels they include. These behavior changes do not add CLI commands or change the API revision.
 
 ## Unattended Pro activation for IT
 
@@ -20,7 +22,7 @@ Display Dimmer 2.2.12+ also accepts a standalone Lemon Squeezy activation comman
 - Display Dimmer running in the current Windows user session.
 - Display Dimmer Pro unlocked.
 - Local automation enabled in Display Dimmer:
-  Settings > General > Advanced > Local automation > Manage...
+  Settings > General > Advanced > Local automation
 - PowerShell, Command Prompt, Task Scheduler, or another local tool that can run `DisplayDimmer.Cli.exe`.
 
 Local automation is designed for same-user local control. It is not a remote-control API and is not intended to expose Display Dimmer over a network.
@@ -95,7 +97,7 @@ If a display only has a `display_N` target, treat it as session-only and rerun `
 ## Documentation
 
 - [Local Automation Guide](docs/local-automation-api.md)
-- [CLI/API 1.2 Reference (wire protocol 1)](docs/cli-api-v1.md)
+- [CLI/API reference (wire protocol 1, revision 1.2)](docs/cli-api-v1.md)
 - [Examples](examples/README.md)
 - [Unattended Pro activation for IT](docs/it-license-deployment.md)
 - [Managed Microsoft Store updates](docs/managed-store-updates.md)
@@ -113,7 +115,7 @@ Useful example entry points:
 - [Arduino light sensor](examples/arduino-light-sensor/)
 - [Arduino motion sensor](examples/arduino-motion-sensor/)
 
-## Saved Presets (2.2.12)
+## Saved Presets (2.2.12 and later)
 
 Save a preset in Settings > Presets, then check the running app's `list-presets`
 and `presets` capabilities before listing or recalling it:
@@ -179,15 +181,17 @@ DisplayDimmer.Cli.exe --set-brightness 45 --target primary --source cli
 DisplayDimmer.Cli.exe --update-external-brightness 45 --target primary --source desk-light-sensor
 ```
 
-By default, `--set-brightness` acts like a manual override. Pass `--source cli` when you want that intent to be explicit in a saved script. This interrupts active schedules/app rules for the target so Display Dimmer does not immediately fight the script.
+By default, `--set-brightness` acts like a manual override. Pass `--source cli` when you want that intent to be explicit in a saved script. In 2.2.15 this pauses the target's automated brightness while contrast and temperature continue. A brightness-only rule is fully paused by that change.
 
 If a script temporarily overrides an active rule, record that the rule was unpaused before the write. When the temporary level is no longer needed, API 1.2 `--resume-automation --target <stable-id> --expected-brightness <temporary-level>` can release that brightness interruption without restoring a stale number; check the running app's `resume-automation` capability first. The expected level detects a different later percentage, but cannot identify a newer user action at the same percentage. The named-source cooperative handoff below already existed in 2.2.10 and does not dim through an active rule.
 
-Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command. In 2.2.13, successful `--resume-automation` also releases targeted manual Trigger interruptions; schedule/app-rule state flags alone cannot identify those interruptions.
+In 2.2.15, `scheduleInterrupted`, `perAppInterrupted` and `automationInterrupted` do not describe every paused level. A contrast-only pause can exist without either brightness-interruption flag. Check `temperatureAutomationInterrupted` separately for temperature. The guarded Resume command still has the contrast and Trigger effects described below.
+
+Automation resume also releases manual contrast holds on the targeted schedule/app rules. The expected-brightness check does not compare contrast, so do not use this command when an existing manual contrast intervention must remain in place. Temperature intervention has its own `--resume-temperature` command. From 2.2.13 onward, successful `--resume-automation` also releases targeted manual Trigger interruptions; schedule/app-rule state flags alone cannot identify those interruptions.
 
 For each display, one selected app rule supplies its included brightness, contrast, and temperature levels. A schedule can supply levels that app rule leaves unchanged; another matching app rule cannot fill those omitted levels. App rules take priority over schedules for levels they include. Preset-linked rules use the preset's saved display targets and levels, not unapplied Presets edits.
 
-Use a named source such as `desk-light-sensor` for cooperative sensor integrations. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. In 2.2.13, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
+Use a named source such as `desk-light-sensor` for cooperative sensor integrations. With `--save` omitted, a named brightness source applies when no schedule or app rule owns brightness on the target. Otherwise it stands down and refreshes the external handoff value instead of interrupting the rule. Contrast-only and temperature-only rules leave brightness available and keep running. From 2.2.13 onward, an active unsuppressed Trigger also owns brightness and blocks a cooperative write. Adding `--save` to a named brightness request uses manual/saved override behavior instead.
 
 Use `--update-external-brightness` when the script is already standing by and should only keep its desired handoff value fresh. Pass the same named `--source` you use for cooperative sensor commands. This command does not move the display and does not interrupt schedules or app rules.
 
@@ -234,7 +238,7 @@ DisplayDimmer.Cli.exe --set-vcp 0x10 10 --target dd_your_display_id --verify --j
 DisplayDimmer.Cli.exe --set-brightness 20 --brightness-mode gamma --target dd_your_display_id --source cli --json
 ```
 
-Raw VCP `0x10` values are monitor-specific and are not necessarily percentages; read the monitor's current value and `vcpMax` first. This pattern also requires Settings > General > **Reset DDC/CI displays to default brightness on exit** to be turned off. For the full extra-dark recipe, including cautious values, error checking, and exact restore behavior, see [Automation Recipes](examples/automation-recipes/README.md#extra-dark-dimming).
+Raw VCP `0x10` values are monitor-specific and are not necessarily percentages; read the monitor's current value and `vcpMax` first. This pattern also requires Settings > General > **Reset hardware brightness on exit (DDC/CI and WMI)** to be turned off. For the full extra-dark recipe, including cautious values, error checking, and exact restore behavior, see [Automation Recipes](examples/automation-recipes/README.md#extra-dark-dimming).
 
 Display Dimmer also includes advanced VCP commands for monitors that support DDC/CI features such as input source, volume, mute, raw monitor contrast, and selected color controls.
 
