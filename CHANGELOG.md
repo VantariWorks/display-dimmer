@@ -93,6 +93,7 @@ This update adds saved Pro presets, compact automation controls, and smoother ev
 - Fixed a responsiveness issue when turning off Local automation from Settings.
 
 ## v2.2.11 (September 24, 2026)
+
 This update gives you clearer automation control and more accurate multi-monitor feedback.
 
 ### New
@@ -114,6 +115,7 @@ This update expands temperature automation, protects unsaved settings changes, a
 - Improved slider feedback and responsiveness, with more reliable click-and-drag behavior.
 
 ## v2.2.9 (September 3, 2026)
+
 Display Dimmer 2.2.9 improves compatibility for blue light filtering and color temperature controls, while keeping display adjustments responsive on more Windows systems.
 
 ### Improved
@@ -136,9 +138,8 @@ Display Dimmer 2.2.8 adds an adjustable blue light filter and per-display color 
 ### Fixed
 - Fixed a software dimming issue that could cause brightness to jump on some displays.
 
-Display Dimmer Pro remains a one-time purchase—no subscription required.
-
 ## v2.2.7 (August 28, 2026)
+
 This update improves gamma brightness, the Pro experience, and reliability when displays change.
 
 ### New
