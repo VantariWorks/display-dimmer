@@ -4,6 +4,15 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.16 (November 7, 2026)
+
+A small update focused on compatibility and reliability.
+
+### Improved
+
+- Improved software dimming and Night light compatibility.
+- Minor reliability and interface fixes.
+
 ## v2.2.15 (November 5, 2026)
 
 This update fixes Windows Night light compatibility, improves display recovery and automation, and adds more ways to customize the main window.
