@@ -4,6 +4,21 @@ This changelog covers notable Display Dimmer updates.
 
 Some maintenance and packaging-only releases are omitted.
 
+## v2.2.17 (November 15, 2026)
+
+This update improves software dimming compatibility and makes window behavior more predictable.
+
+### New
+- Settings now remembers its position instead of reopening beside the main window.
+
+### Improved
+- Enhanced software dimming now works on more systems.
+- Improved taskbar minimize and restore behavior.
+
+### Fixed
+• Fixed contrast not responding on some HDR displays when enhanced software dimming is enabled.
+• Fixed an issue enabling hardware brightness control at 0% on some HDR displays.
+
 ## v2.2.16 (November 7, 2026)
 
 A small update focused on compatibility and reliability.
