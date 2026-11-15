@@ -16,8 +16,8 @@ This update improves software dimming compatibility and makes window behavior mo
 - Improved taskbar minimize and restore behavior.
 
 ### Fixed
-• Fixed contrast not responding on some HDR displays when enhanced software dimming is enabled.
-• Fixed an issue enabling hardware brightness control at 0% on some HDR displays.
+- Fixed contrast not responding on some HDR displays when enhanced software dimming is enabled.
+- Fixed an issue enabling hardware brightness control at 0% on some HDR displays.
 
 ## v2.2.16 (November 7, 2026)
 
